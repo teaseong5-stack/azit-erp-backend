@@ -143,9 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- 추가 설정들 ---
 
-CORS_ALLOWED_ORIGINS = [
-#     "https://your-frontend-address.com",
-# ]
+CORS_ALLOWED_ORIGINS = []
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
