@@ -33,6 +33,10 @@ ALLOWED_HOSTS = []
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+# Render 배포 주소를 신뢰할 수 있는 출처로 추가
+RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
+if RENDER_EXTERNAL_URL:
+    CSRF_TRUSTED_ORIGINS = [RENDER_EXTERNAL_URL]    
 
 
 # Application definition
@@ -188,7 +192,3 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenObtainPairSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenRefreshSerializer",
 }
-# Render 배포 주소를 신뢰할 수 있는 출처로 추가
-RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
-if RENDER_EXTERNAL_URL:
-    CSRF_TRUSTED_ORIGINS = [RENDER_EXTERNAL_URL]
