@@ -60,7 +60,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 위치 확인
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -143,12 +143,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- 추가 설정들 ---
 
-CORS_ALLOWED_ORIGINS = []
+# [수정 사항]
+# CORS_ALLOWED_ORIGINS에 프론트엔드 URL을 추가하여 API 요청을 허용합니다.
+CORS_ALLOWED_ORIGINS = [
+    "https://azit-erp-frontend.onrender.com",
+]
 
-# 수정된 코드
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
