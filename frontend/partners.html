@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>아지트 ERP - 제휴업체 관리</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 사이드바 메뉴 -->
+    <nav class="sidebar">
+        <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a></li>
+            <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a></li>
+			<li class="nav-item"><a class="nav-link" href="bulk_upload.html"><i class="bi bi-upload"></i> 일괄 등록</a></li>
+            <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a></li>
+            <li class="nav-item"><a class="nav-link active" href="partners.html"><i class="bi bi-building me-2"></i>제휴업체 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
+        </ul>
+        <ul id="admin-menu" class="nav flex-column mt-auto">
+            <li class="nav-item"><a class="nav-link" href="settings.html"><i class="bi bi-gear-fill me-2"></i>설정</a></li>
+        </ul>
+    </nav>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>제휴업체 관리</h1>
+            <button id="logout-button" class="btn btn-outline-danger">로그아웃</button>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">새 제휴업체 등록</h2>
+                <form id="partner-form" class="mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6"><label for="partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="partner-name" required></div>
+                        <div class="col-md-6">
+                            <label for="partner-category" class="form-label">업체 종류</label>
+                            <select id="partner-category" class="form-select" required>
+                                <option value="HOTEL">숙박</option>
+                                <option value="AIRLINE">항공사</option>
+                                <option value="RENTAL">렌터카</option>
+                                <option value="RESTAURANT">식당</option>
+                                <option value="AGENCY">현지 에이전시</option>
+                                <option value="OTHER">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label for="partner-contact-person" class="form-label">담당자</label><input type="text" class="form-control" id="partner-contact-person"></div>
+                        <div class="col-md-4"><label for="partner-phone" class="form-label">연락처</label><input type="text" class="form-control" id="partner-phone"></div>
+                        <div class="col-md-4"><label for="partner-email" class="form-label">이메일</label><input type="email" class="form-control" id="partner-email"></div>
+                        <div class="col-12"><label for="partner-notes" class="form-label">메모</label><textarea class="form-control" id="partner-notes" rows="2"></textarea></div>
+                        <div class="col-12"><button type="submit" class="btn btn-primary">제휴업체 추가</button></div>
+                    </div>
+                </form>
+
+                <!-- 일괄 등록 섹션 -->
+                <hr>
+                <h2 class="card-title mt-4">엑셀/시트에서 일괄 등록</h2>
+                <div id="bulk-import-section">
+                    <div class="mb-3">
+                        <label for="bulk-paste-area" class="form-label">
+                            아래 순서에 맞춰 엑셀/시트 데이터를 복사하여 붙여넣으세요.<br>
+                            <small class="text-muted">순서: 업체명, 종류(HOTEL, AIRLINE 등), 담당자, 연락처, 이메일, 주소, 메모</small>
+                        </label>
+                        <textarea class="form-control" id="bulk-paste-area" rows="5" placeholder="여기에 붙여넣기..."></textarea>
+                    </div>
+                    <button id="bulk-import-button" class="btn btn-info">데이터 등록하기</button>
+                    <div id="import-status" class="mt-2"></div>
+                </div>
+
+                <h3 class="mt-4">제휴업체 목록</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>업체명</th>
+                                <th>종류</th>
+                                <th>담당자</th>
+                                <th>연락처</th>
+								<th>주소</th>
+                                <th>비고</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partner-list-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 제휴업체 수정 모달 -->
+    <div class="modal fade" id="editPartnerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">제휴업체 정보 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-partner-form">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label for="edit-partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="edit-partner-name" required></div>
+                            <div class="col-md-6">
+                                <label for="edit-partner-category" class="form-label">업체 종류</label>
+                                <select id="edit-partner-category" class="form-select" required>
+                                    <option value="HOTEL">호텔</option>
+                                    <option value="AIRLINE">항공사</option>
+                                    <option value="RENTAL">렌터카</option>
+                                    <option value="RESTAURANT">식당</option>
+                                    <option value="AGENCY">현지 에이전시</option>
+                                    <option value="OTHER">기타</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4"><label for="edit-partner-contact-person" class="form-label">담당자</label><input type="text" class="form-control" id="edit-partner-contact-person"></div>
+                            <div class="col-md-4"><label for="edit-partner-phone" class="form-label">연락처</label><input type="text" class="form-control" id="edit-partner-phone"></div>
+                            <div class="col-md-4"><label for="edit-partner-email" class="form-label">이메일</label><input type="email" class="form-control" id="edit-partner-email"></div>
+                            <div class="col-12"><label for="edit-partner-notes" class="form-label">메모</label><textarea class="form-control" id="edit-partner-notes" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-primary" id="edit-partner-save-button">변경사항 저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="common.js"></script>
+    <script src="partners.js" defer></script>
+</body>
+</html>
