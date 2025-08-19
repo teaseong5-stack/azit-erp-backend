@@ -35,16 +35,9 @@ ALLOWED_HOSTS = []
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-else:
-    # Render 환경이 아닐 경우(로컬 개발 등)를 대비하고,
-    # Render의 모든 서브도메인을 허용하기 위해 와일드카드를 추가합니다.
-    ALLOWED_HOSTS.extend(['127.0.0.1', '.onrender.com'])
 
-
-# Render 배포 주소를 신뢰할 수 있는 출처로 추가
-RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
-if RENDER_EXTERNAL_URL:
-    CSRF_TRUSTED_ORIGINS = [RENDER_EXTERNAL_URL]    
+# 로컬 개발 환경과 Render의 모든 서브도메인을 허용하기 위해 와일드카드를 추가합니다.
+ALLOWED_HOSTS.extend(['127.0.0.1', '.onrender.com'])
 
 
 # Application definition
@@ -151,17 +144,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- 추가 설정들 ---
 
-# CORS_ALLOWED_ORIGINS에 프론트엔드 URL을 추가하여 API 요청을 허용합니다.
+# CORS (Cross-Origin Resource Sharing) 설정
 CORS_ALLOWED_ORIGINS = [
     "https://azit-erp-frontend.onrender.com",
 ]
 
-# [수정 사항] CSRF_TRUSTED_ORIGINS에도 프론트엔드 URL을 추가하여 보안을 강화합니다.
+# CSRF (Cross-Site Request Forgery) 보호 설정
 CSRF_TRUSTED_ORIGINS = [
     "https://azit-erp-frontend.onrender.com",
 ]
+RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
 if RENDER_EXTERNAL_URL:
     CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
