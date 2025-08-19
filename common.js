@@ -1,15 +1,13 @@
 // 이 파일은 모든 페이지에서 공통으로 사용하는 기능(API 통신, 로그인/로그아웃 등)을 담당합니다.
 
 // --- 1. API 기본 주소 설정 (가장 중요한 부분) ---
-// URL 끝에 /api를 포함시켜 일관성을 유지하고, 다른 파일에서 사용 가능하도록 전역 변수로 노출합니다.
 window.API_BASE_URL = 'https://azit-erp-backend-1.onrender.com/api'; 
 
 // --- 2. 인증 확인 ---
 (function() {
     const accessToken = localStorage.getItem('accessToken');
-    // 로그인 페이지(index.html)나 회원가입 페이지가 아닐 때만 인증을 확인합니다.
     if (!accessToken && !window.location.pathname.endsWith('index.html') && !window.location.pathname.endsWith('register.html')) {
-        window.location.href = 'index.html'; // 수정됨
+        window.location.href = 'index.html';
     }
 })();
 
@@ -25,16 +23,17 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     const config = { ...options, headers };
     
     try {
-        // URL 조합 방식을 개선하여 중복 슬래시 문제를 원천적으로 방지합니다.
-        // API_BASE_URL은 '/api'로 끝나고, endpoint는 'customers/' 처럼 '/'로 끝납니다.
-        const url = `${window.API_BASE_URL}/${endpoint}`;
+        // [수정 사항]
+        // endpoint 끝에 슬래시(/)가 없으면 자동으로 추가하여 주소 형식을 통일합니다.
+        const formattedEndpoint = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+        const url = `${window.API_BASE_URL}/${formattedEndpoint}`;
         
         const response = await fetch(url, config);
         
         if (response.status === 401) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
-            window.location.href = 'index.html'; // 수정됨
+            window.location.href = 'index.html';
             return null;
         }
         if (!response.ok) {
@@ -58,19 +57,17 @@ window.addEventListener('load', async () => {
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
-            window.location.href = 'index.html'; // 수정됨
+            window.location.href = 'index.html';
         });
     }
 
     const adminMenu = document.getElementById('admin-menu');
     if (adminMenu) {
-        // 로그인 페이지에서는 user-info를 호출하지 않도록 예외 처리합니다.
         if (!window.location.pathname.endsWith('index.html')) {
-            const user = await window.apiFetch('user-info/');
+            const user = await window.apiFetch('user-info');
             if (user && user.is_superuser) {
                 adminMenu.style.display = 'block';
             }
         }
     }
 });
-
