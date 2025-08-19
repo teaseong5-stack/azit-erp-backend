@@ -24,11 +24,17 @@
             </div>
             <button class="w-100 btn btn-lg btn-primary mt-3" type="submit">로그인</button>
         </form>
-        <!-- 계정 등록 링크 추가 -->
         <p class="mt-3">
             계정이 없으신가요? <a href="register.html">계정 등록</a>
         </p>
     </main>
-    <script src="login.js"></script>
+
+    <!-- 
+      [수정 사항]
+      login.js가 API 주소를 알 수 있도록 common.js 파일을 먼저 불러옵니다.
+      defer 속성을 사용하여 HTML 문서가 모두 로드된 후 스크립트를 실행하도록 합니다.
+    -->
+    <script src="common.js" defer></script>
+    <script src="login.js" defer></script>
 </body>
 </html>
