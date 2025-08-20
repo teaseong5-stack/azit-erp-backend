@@ -2,6 +2,7 @@ body {
     display: flex;
     min-height: 100vh;
     background-color: #f8f9fa;
+    font-family: 'Pretendard', sans-serif; /* 더 선명한 최신 폰트 적용 */
 }
 
 .sidebar {
@@ -30,11 +31,7 @@ body {
     font-size: 1.2em;
 }
 
-.sidebar .nav-link.active {
-    color: #fff;
-    background-color: #495057;
-}
-
+.sidebar .nav-link.active,
 .sidebar .nav-link:hover {
     color: #fff;
     background-color: #495057;
@@ -55,9 +52,7 @@ body {
     width: calc(100% - 280px);
 }
 
-/* --- 아래 스타일 새로 추가 --- */
-
-/* 대시보드 통계 카드 스타일 */
+/* --- 대시보드 통계 카드 스타일 --- */
 .stat-card {
     background-color: #ffffff;
     border: 1px solid #dee2e6;
@@ -95,7 +90,7 @@ body {
 }
 
 
-/* 테이블 컨테이너 스타일 */
+/* --- 테이블 컨테이너 스타일 --- */
 .table-container {
     max-height: 800px;
     overflow-y: auto;
@@ -108,12 +103,79 @@ body {
     z-index: 1;
 }
 
-/* 관리자 메뉴는 기본적으로 숨김 */
+/* --- 관리자 메뉴 스타일 --- */
 #admin-menu {
     display: none;
 }
 
-/* body 태그에 'is-admin' 클래스가 있을 경우에만 관리자 메뉴를 보여줌 */
 body.is-admin #admin-menu {
     display: flex;
+}
+
+/* --- [추가된 코드] 캘린더 디자인 개선 --- */
+
+/* 캘린더 전체 컨테이너 */
+.fc {
+    border-radius: 0.75rem;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+    padding: 1rem;
+    background-color: #fff;
+}
+
+/* 캘린더 헤더 (제목, 버튼) */
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1.5rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.fc .fc-button {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.fc .fc-button:hover,
+.fc .fc-button-primary:not(:disabled):active {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+/* 캘린더 날짜 셀 */
+.fc-daygrid-day {
+    border-color: #f1f3f5;
+}
+
+/* 오늘 날짜 하이라이트 */
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(13, 110, 253, 0.07);
+}
+
+/* 이벤트 아이템 */
+.fc-daygrid-event {
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-weight: 500;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.fc-event-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
