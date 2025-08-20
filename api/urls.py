@@ -24,4 +24,7 @@ urlpatterns = [
     # Transaction URLs
     path('transactions/', views.transaction_list),
     path('transactions/<int:pk>/', views.transaction_detail),
+    
+    # [추가된 경로] 거래내역 요약 정보를 위한 URL
+    path('transactions/summary/', views.transaction_summary),
 ]
