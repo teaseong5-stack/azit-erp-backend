@@ -1,98 +1,132 @@
-document.addEventListener("DOMContentLoaded", function() {
-    // reports.html 페이지에 있을 때만 이 코드를 실행합니다.
-    if (!document.getElementById('report-table-body')) return;
+document.addEventListener("DOMContentLoaded", async function() {
+    // reports.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
+    if (!document.getElementById('report-type')) return;
 
-    const reportTableBody = document.getElementById('report-table-body');
-    const categorySummaryTable = document.getElementById('category-summary-table');
-    const categorySummaryFooter = document.getElementById('category-summary-footer');
-    const downloadCsvButton = document.getElementById('download-csv-button');
+    const reportTypeSelect = document.getElementById('report-type');
+    const generateReportButton = document.getElementById('generate-report-button');
+    const reportResultDiv = document.getElementById('report-result');
+    const chartContainer = document.getElementById('chart-container');
+    let reportChart = null;
 
-    const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
+    // [수정] 모든 예약 데이터를 한 번에 가져옵니다.
+    const response = await window.apiFetch('reservations?page_size=10000');
+    if (!response || !response.results) {
+        reportResultDiv.innerHTML = '<p class="text-danger">리포트를 생성할 예약 데이터가 없습니다.</p>';
+        return;
+    }
+    const allReservations = response.results;
 
-    // 주어진 예약 데이터로 리포트 페이지 전체를 생성하는 함수
-    function generateReport(reservations) {
-        // 1. 카테고리별 손익 계산
-        const summary = {};
-        let grandTotalSales = 0;
-        let grandTotalCost = 0;
+    /**
+     * 선택된 리포트 종류에 따라 데이터를 분석하고 결과를 표시하는 함수
+     */
+    function generateReport() {
+        const reportType = reportTypeSelect.value;
+        reportResultDiv.innerHTML = ''; // 이전 결과 초기화
+        chartContainer.innerHTML = '<canvas id="reportChart"></canvas>'; // 차트 캔버스 재생성
+        const ctx = document.getElementById('reportChart').getContext('2d');
 
-        const activeReservations = reservations.filter(res => res.status !== 'CANCELED');
+        // [수정] reservations.filter 대신 allReservations.filter를 사용합니다.
+        const activeReservations = allReservations.filter(res => res.status !== 'CANCELED');
 
-        activeReservations.forEach(res => {
-            if (!summary[res.category]) {
-                summary[res.category] = { sales: 0, cost: 0 };
-            }
-            summary[res.category].sales += Number(res.total_price);
-            summary[res.category].cost += Number(res.total_cost);
-        });
-
-        // 2. 요약 표 채우기
-        categorySummaryTable.innerHTML = '';
-        for (const category in summary) {
-            const profit = summary[category].sales - summary[category].cost;
-            const row = `
-                <tr>
-                    <td>${categoryLabels[category] || category}</td>
-                    <td>${summary[category].sales.toLocaleString()}원</td>
-                    <td>${summary[category].cost.toLocaleString()}원</td>
-                    <td class="fw-bold ${profit >= 0 ? 'text-primary' : 'text-danger'}">${profit.toLocaleString()}원</td>
-                </tr>
-            `;
-            categorySummaryTable.innerHTML += row;
-            grandTotalSales += summary[category].sales;
-            grandTotalCost += summary[category].cost;
+        if (reportChart) {
+            reportChart.destroy();
         }
 
-        // 3. 요약 표 합계 채우기
-        const grandTotalProfit = grandTotalSales - grandTotalCost;
-        categorySummaryFooter.innerHTML = `
-            <tr>
-                <td>합계</td>
-                <td>${grandTotalSales.toLocaleString()}원</td>
-                <td>${grandTotalCost.toLocaleString()}원</td>
-                <td class="${grandTotalProfit >= 0 ? 'text-primary' : 'text-danger'}">${grandTotalProfit.toLocaleString()}원</td>
-            </tr>
-        `;
+        switch (reportType) {
+            case 'monthly-sales':
+                const monthlySales = {};
+                activeReservations.forEach(res => {
+                    if (res.start_date) {
+                        const month = res.start_date.substring(0, 7);
+                        monthlySales[month] = (monthlySales[month] || 0) + Number(res.total_price);
+                    }
+                });
 
-        // 4. 전체 예약 내역 표 채우기
-        reportTableBody.innerHTML = '';
-        reservations.forEach(res => {
-            const row = `
-                <tr>
-                    <td>${res.id}</td>
-                    <td>${res.category}</td>
-                    <td>${res.tour_name}</td>
-                    <td>${res.customer ? res.customer.name : ''}</td>
-                    <td>${res.manager ? res.manager.username : ''}</td>
-                    <td>${res.start_date || ''}</td>
-                    <td>${Number(res.total_price).toLocaleString()}</td>
-                    <td>${Number(res.total_cost).toLocaleString()}</td>
-                    <td>${res.status}</td>
-                </tr>
-            `;
-            reportTableBody.innerHTML += row;
-        });
+                const sortedMonths = Object.keys(monthlySales).sort();
+                reportChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedMonths,
+                        datasets: [{
+                            label: '월별 총 매출액',
+                            data: sortedMonths.map(month => monthlySales[month]),
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                        }]
+                    },
+                    options: { scales: { y: { beginAtZero: true } } }
+                });
+                break;
+
+            case 'category-sales':
+                const categorySales = {};
+                activeReservations.forEach(res => {
+                    categorySales[res.category] = (categorySales[res.category] || 0) + Number(res.total_price);
+                });
+
+                reportChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(categorySales),
+                        datasets: [{
+                            data: Object.values(categorySales),
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                        }]
+                    }
+                });
+                break;
+
+            case 'manager-performance':
+                const managerPerformance = {};
+                activeReservations.forEach(res => {
+                    const managerName = res.manager ? res.manager.username : '미지정';
+                    if (!managerPerformance[managerName]) {
+                        managerPerformance[managerName] = { count: 0, sales: 0 };
+                    }
+                    managerPerformance[managerName].count += 1;
+                    managerPerformance[managerName].sales += Number(res.total_price);
+                });
+
+                reportChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(managerPerformance),
+                        datasets: [{
+                            label: '담당자별 예약 건수',
+                            data: Object.values(managerPerformance).map(p => p.count),
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            yAxisID: 'y-axis-count'
+                        }, {
+                            label: '담당자별 매출액',
+                            data: Object.values(managerPerformance).map(p => p.sales),
+                            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                            type: 'line',
+                            yAxisID: 'y-axis-sales'
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            'y-axis-count': {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                title: { display: true, text: '예약 건수' }
+                            },
+                            'y-axis-sales': {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                title: { display: true, text: '매출액 (원)' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+                break;
+        }
     }
 
-    // CSV 다운로드 버튼 이벤트
-    downloadCsvButton.addEventListener('click', async () => {
-        const blob = await window.apiFetch('export-csv', {}, true);
-        if (blob) {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'reservations.csv';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-    });
+    generateReportButton.addEventListener('click', generateReport);
 
-    // 페이지 초기 로드
-    window.apiFetch('reservations').then(reservations => {
-        if (reservations) {
-            generateReport(reservations);
-        }
-    });
+    // 페이지 로드 시 기본 리포트 생성
+    generateReport();
 });

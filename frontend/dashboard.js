@@ -33,9 +33,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 date.setDate(date.getDate() + 1);
                 endDate = date.toISOString().split('T')[0];
             }
+            
+            // [수정 사항] res.customer가 null일 경우를 대비하여 방어 코드를 추가합니다.
+            const customerName = res.customer ? res.customer.name : '고객 미지정';
+
             return {
                 id: res.id,
-                title: `[${res.customer.name}] ${res.tour_name}`,
+                title: `[${customerName}] ${res.tour_name}`,
                 start: res.start_date,
                 end: endDate,
                 backgroundColor: categoryColors[res.category] || '#6c757d',
@@ -68,6 +72,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reservationId = info.event.id;
                 const res = allReservations.find(r => r.id == reservationId);
                 if (res) {
+                    // [수정 사항] 고객 정보가 null일 경우를 대비하여 방어 코드를 추가합니다.
+                    const customerName = res.customer ? res.customer.name : '고객 미지정';
+                    const customerPhone = res.customer ? res.customer.phone_number : '정보 없음';
+
                     let detailsHtml = `
                         <div class="row">
                             <div class="col-md-6">
@@ -76,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             </div>
                             <div class="col-md-6 text-md-end">
                                 <p><strong>담당자:</strong> ${res.manager.username}</p>
-                                <p><strong>고객:</strong> ${res.customer.name} (${res.customer.phone_number})</p>
+                                <p><strong>고객:</strong> ${customerName} (${customerPhone})</p>
                             </div>
                         </div>
                         <hr>
@@ -210,13 +218,8 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     
-    // [수정 사항]
-    // 페이지네이션이 적용되었으므로, 모든 예약 데이터를 가져오기 위해 ?page_size=10000 과 같은 파라미터를 추가합니다.
-    // (대시보드는 모든 데이터를 기반으로 통계를 내야 하므로 페이지네이션을 사용하지 않는 것이 더 적합합니다.)
     window.apiFetch('reservations?page_size=10000').then(response => {
-        // 응답이 있고, results 키가 있는지 확인합니다.
         if(response && response.results) {
-            // 실제 데이터 목록은 response.results에 들어있습니다.
             const reservations = response.results;
             
             const events = formatEvents(reservations);
