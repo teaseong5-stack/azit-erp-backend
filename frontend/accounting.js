@@ -3,7 +3,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     if (!document.getElementById('transaction-list-table')) return;
 
     // --- 1. HTML 요소 및 전역 변수 선언 ---
+    
+    // [수정] 사용자 정보를 DOM 로드 이후, 가장 먼저 가져오도록 위치를 변경합니다.
     const user = await window.apiFetch('user-info');
+
     const transactionListTable = document.getElementById('transaction-list-table');
     const transactionForm = document.getElementById('transaction-form');
     const reservationSelect = document.getElementById('trans-reservation');
