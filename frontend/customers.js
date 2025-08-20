@@ -1,8 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // customers.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('customer-list-table')) return;
 
-    // HTML 요소들을 변수에 할당합니다.
+    // --- HTML 요소 변수 선언 ---
     const customerListTable = document.getElementById('customer-list-table');
     const customerForm = document.getElementById('customer-form');
     const editModal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
@@ -10,28 +9,27 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchInput = document.getElementById('customer-search-input');
     const searchButton = document.getElementById('customer-search-button');
     const searchResetButton = document.getElementById('customer-search-reset-button');
-
-    // 페이지네이션 관련 요소 및 상태 변수를 선언합니다.
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
+    const bulkDataInput = document.getElementById('bulk-customer-data');
+    const bulkUploadButton = document.getElementById('bulk-upload-button');
+    const bulkResultLog = document.getElementById('bulk-result-log');
+
+    // --- 상태 변수 ---
     let currentPage = 1;
     let totalPages = 1;
 
-    // 서버에서 고객 목록을 가져와 화면에 표시하는 함수입니다.
+    // --- 함수 선언 ---
     async function populateCustomers(page = 1, searchTerm = '') {
-        // 페이지 번호와 검색어를 포함하여 API 엔드포인트를 구성합니다.
         let endpoint = `customers?page=${page}`;
         if (searchTerm) {
             endpoint += `&search=${searchTerm}`;
         }
         
-        // 백엔드에서 페이지네이션 형식으로 응답을 받습니다.
         const response = await window.apiFetch(endpoint);
         
-        customerListTable.innerHTML = ''; // 기존 목록을 초기화합니다.
-
-        // 응답이 없거나 결과가 없으면, 버튼을 비활성화하고 메시지를 표시합니다.
+        customerListTable.innerHTML = '';
         if(!response || !response.results) {
             prevPageButton.disabled = true;
             nextPageButton.disabled = true;
@@ -41,9 +39,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const customers = response.results;
         const totalCount = response.count;
-        totalPages = Math.ceil(totalCount / 50); // 페이지당 50개 기준으로 총 페이지 수를 계산합니다.
+        totalPages = Math.ceil(totalCount / 50);
 
-        // 각 고객 데이터를 테이블의 행(row)으로 만들어 추가합니다.
         customers.forEach(customer => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -57,7 +54,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const buttonGroup = document.createElement('div');
             buttonGroup.className = 'btn-group';
 
-            // 수정 버튼 생성 및 이벤트 처리
             const editButton = document.createElement('button');
             editButton.textContent = '수정';
             editButton.className = 'btn btn-primary btn-sm';
@@ -77,19 +73,18 @@ document.addEventListener("DOMContentLoaded", function() {
                         body: JSON.stringify(updatedData)
                     });
                     editModal.hide();
-                    populateCustomers(currentPage, searchInput.value.trim()); // 현재 페이지 새로고침
+                    populateCustomers(currentPage, searchInput.value.trim());
                 };
                 editModal.show();
             };
 
-            // 삭제 버튼 생성 및 이벤트 처리
             const deleteButton = document.createElement('button');
             deleteButton.textContent = '삭제';
             deleteButton.className = 'btn btn-danger btn-sm';
             deleteButton.onclick = async () => {
                 if (confirm(`'${customer.name}' 고객을 정말 삭제하시겠습니까?`)) {
                     await window.apiFetch(`customers/${customer.id}`, { method: 'DELETE' });
-                    populateCustomers(currentPage, searchInput.value.trim()); // 현재 페이지 새로고침
+                    populateCustomers(currentPage, searchInput.value.trim());
                 }
             };
 
@@ -99,14 +94,18 @@ document.addEventListener("DOMContentLoaded", function() {
             customerListTable.appendChild(row);
         });
 
-        // 페이지 정보 및 버튼 상태를 업데이트합니다.
         currentPage = page;
         pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
-        prevPageButton.disabled = !response.previous; // 이전 페이지가 없으면 비활성화
-        nextPageButton.disabled = !response.next;     // 다음 페이지가 없으면 비활성화
+        prevPageButton.disabled = !response.previous;
+        nextPageButton.disabled = !response.next;
     }
-    
-    // 새 고객 등록 폼 제출 이벤트 처리
+
+    function performSearch() {
+        const searchTerm = searchInput.value.trim();
+        populateCustomers(1, searchTerm);
+    }
+
+    // --- 이벤트 리스너 설정 ---
     customerForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -116,14 +115,8 @@ document.addEventListener("DOMContentLoaded", function() {
         };
         await window.apiFetch('customers', { method: 'POST', body: JSON.stringify(formData) });
         customerForm.reset();
-        populateCustomers(); // 목록 새로고침
+        populateCustomers();
     });
-
-    // 검색 기능 관련 이벤트 처리
-    function performSearch() {
-        const searchTerm = searchInput.value.trim();
-        populateCustomers(1, searchTerm); // 검색 시 항상 첫 페이지부터 조회
-    }
 
     searchButton.addEventListener('click', performSearch);
     searchInput.addEventListener('keypress', (event) => {
@@ -132,10 +125,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     searchResetButton.addEventListener('click', () => {
         searchInput.value = '';
-        populateCustomers(1); // 초기화 시 첫 페이지 조회
+        populateCustomers(1);
     });
     
-    // 이전/다음 페이지 버튼 이벤트 처리
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) {
             populateCustomers(currentPage - 1, searchInput.value.trim());
@@ -148,6 +140,53 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 페이지가 처음 로드될 때 고객 목록을 불러옵니다.
+    bulkUploadButton.addEventListener('click', async () => {
+        const rawData = bulkDataInput.value.trim();
+        if (!rawData) {
+            bulkResultLog.textContent = '오류: 입력된 데이터가 없습니다.';
+            return;
+        }
+
+        const rows = rawData.split('\n').slice(1);
+        const customers = [];
+        bulkResultLog.textContent = '데이터 변환 중...';
+
+        for (const row of rows) {
+            const columns = row.split('\t');
+            if (columns.length < 2) continue;
+            const customer = {
+                name: columns[0] || '',
+                phone_number: columns[1] || '',
+                email: columns[2] || ''
+            };
+            customers.push(customer);
+        }
+
+        if (customers.length === 0) {
+            bulkResultLog.textContent = '오류: 변환할 수 있는 데이터가 없습니다. 형식을 확인해주세요.';
+            return;
+        }
+
+        bulkResultLog.textContent = `${customers.length}개의 데이터를 서버로 전송합니다...`;
+
+        try {
+            const response = await window.apiFetch('customers/bulk/', {
+                method: 'POST',
+                body: JSON.stringify(customers)
+            });
+
+            if (response) {
+                bulkResultLog.textContent = `업로드 완료!\n\n${JSON.stringify(response, null, 2)}`;
+                bulkDataInput.value = '';
+                populateCustomers(1);
+            } else {
+                bulkResultLog.textContent = '서버에서 오류가 발생했습니다. 응답을 받지 못했습니다.';
+            }
+        } catch (error) {
+            bulkResultLog.textContent = `업로드 중 오류 발생:\n${error}`;
+        }
+    });
+
+    // --- 페이지 초기화 ---
     populateCustomers();
 });

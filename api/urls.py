@@ -5,11 +5,12 @@ urlpatterns = [
     # User URLs
     path('register/', views.register_user),
     path('user-info/', views.get_user_info),
-    path('users/', views.user_list), # 이 줄을 추가
+    path('users/', views.user_list),
 
     # Customer URLs
     path('customers/', views.customer_list),
     path('customers/<int:pk>/', views.customer_detail),
+    path('customers/bulk/', views.customer_bulk_import),
 
     # Reservation URLs
     path('reservations/', views.reservation_list),
@@ -24,7 +25,6 @@ urlpatterns = [
     # Transaction URLs
     path('transactions/', views.transaction_list),
     path('transactions/<int:pk>/', views.transaction_detail),
-    
-    # [추가된 경로] 거래내역 요약 정보를 위한 URL
     path('transactions/summary/', views.transaction_summary),
 ]
+

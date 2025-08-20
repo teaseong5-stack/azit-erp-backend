@@ -21,7 +21,7 @@
             <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
         </ul>
         <ul id="admin-menu" class="nav flex-column mt-auto">
-            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill"></i>설정</a></li>
+            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill me-2"></i>설정</a></li>
         </ul>
     </nav>
 
@@ -43,6 +43,23 @@
                         <div class="col-md-auto align-self-end"><button type="submit" class="btn btn-primary">고객 추가</button></div>
                     </div>
                 </form>
+
+                <hr class="my-4">
+                <h2 class="card-title">고객 일괄 등록</h2>
+                <p class="card-text">
+                    아래 순서에 맞춰 엑셀이나 구글 시트의 데이터를 복사한 후, 텍스트 상자에 붙여넣으세요. (첫 줄은 헤더이므로 제외됩니다.)
+                </p>
+                <div class="alert alert-info">
+                    <strong>데이터 순서:</strong> 이름 | 연락처 | 이메일
+                </div>
+                <textarea id="bulk-customer-data" class="form-control" rows="8" placeholder="여기에 데이터를 붙여넣으세요..."></textarea>
+                <button id="bulk-upload-button" class="btn btn-primary mt-3">일괄 등록 시작</button>
+                
+                <h5 class="mt-4">업로드 결과</h5>
+                <div id="bulk-result-log" class="p-3 bg-light rounded" style="min-height: 100px; white-space: pre-wrap;">
+                    결과가 여기에 표시됩니다.
+                </div>
+
                 <h3 class="mt-4">고객 목록</h3>
                 <div class="input-group mb-3">
                     <input type="text" id="customer-search-input" class="form-control" placeholder="고객명 또는 전화번호로 검색">
@@ -60,12 +77,9 @@
                                 <th>관리</th>
                             </tr>
                         </thead>
-                        <tbody id="customer-list-table">
-                            <!-- 자바스크립트가 여기에 목록을 채웁니다. -->
-                        </tbody>
+                        <tbody id="customer-list-table"></tbody>
                     </table>
                 </div>
-                <!-- [수정 사항] 페이지네이션 버튼과 정보 표시 영역을 추가합니다. -->
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <div>
                         <span id="page-info"></span>

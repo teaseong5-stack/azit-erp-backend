@@ -85,6 +85,34 @@ def customer_list(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# [새로 추가된 뷰]
+# 고객 정보를 일괄적으로 등록하는 API
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def customer_bulk_import(request):
+    data = request.data
+    if not isinstance(data, list):
+        return Response({"error": "Input must be a list of customer objects."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    success_count = 0
+    errors = []
+    
+    for item in data:
+        serializer = CustomerSerializer(data=item)
+        if serializer.is_valid():
+            serializer.save()
+            success_count += 1
+        else:
+            errors.append({ "data": item, "errors": serializer.errors })
+            
+    if errors:
+        return Response({
+            "message": f"{success_count}건 성공, {len(errors)}건 실패.",
+            "errors": errors
+        }, status=status.HTTP_207_MULTI_STATUS)
+        
+    return Response({"message": f"총 {success_count}건의 고객 정보가 성공적으로 등록되었습니다."}, status=status.HTTP_201_CREATED)
+
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def customer_detail(request, pk):
@@ -230,9 +258,6 @@ def partner_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- Transaction 관련 뷰 ---
-
-# [새로 추가된 뷰]
-# 전체 기간 또는 특정 월의 수입/지출 합계를 계산하는 API
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
@@ -240,42 +265,26 @@ def transaction_summary(request):
         queryset = Transaction.objects.all()
     else:
         queryset = Transaction.objects.filter(manager=request.user)
-
     year = request.query_params.get('year')
     month = request.query_params.get('month')
-
     if year and month:
         queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
-
     summary = queryset.aggregate(
-        total_income=Coalesce(
-            Sum('amount', filter=Q(transaction_type='INCOME')),
-            Value(0),
-            output_field=DecimalField()
-        ),
-        total_expense=Coalesce(
-            Sum('amount', filter=Q(transaction_type='EXPENSE')),
-            Value(0),
-            output_field=DecimalField()
-        )
+        total_income=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME')), Value(0), output_field=DecimalField()),
+        total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField())
     )
-    
     summary['balance'] = summary['total_income'] - summary['total_expense']
-    
     return Response(summary)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     if request.method == 'GET':
-        base_queryset = Transaction.objects.select_related(
-            'reservation__customer', 'partner', 'manager'
-        )
+        base_queryset = Transaction.objects.select_related('reservation__customer', 'partner', 'manager')
         if request.user.is_superuser:
             queryset = base_queryset.all()
         else:
             queryset = base_queryset.filter(manager=request.user)
-        
         search_query = request.query_params.get('search', None)
         date_after = request.query_params.get('date_after', None)
         date_before = request.query_params.get('date_before', None)
@@ -289,13 +298,11 @@ def transaction_list(request):
             queryset = queryset.filter(transaction_date__gte=date_after)
         if date_before:
             queryset = queryset.filter(transaction_date__lte=date_before)
-        
         paginator = PageNumberPagination()
         paginator.page_size = 50
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-transaction_date'), request)
         serializer = TransactionSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
-
     elif request.method == 'POST':
         serializer = TransactionSerializer(data=request.data)
         if serializer.is_valid():
