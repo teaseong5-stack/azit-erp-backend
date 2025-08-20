@@ -32,6 +32,27 @@
             <button id="logout-button" class="btn btn-outline-danger">로그아웃</button>
         </div>
 
+        <!-- 월별 현황 필터 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">월별 현황 조회</h5>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="summary-year-select" class="form-label">년도</label>
+                        <select id="summary-year-select" class="form-select"></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="summary-month-select" class="form-label">월</label>
+                        <select id="summary-month-select" class="form-select"></select>
+                    </div>
+                    <div class="col-md-auto">
+                        <button id="summary-filter-button" class="btn btn-primary">조회</button>
+                        <button id="summary-reset-button" class="btn btn-secondary">전체보기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 회계 현황판 -->
         <div class="row text-center mb-4">
             <div class="col-md-4"><div class="card text-white bg-primary"><div class="card-body"><h5 class="card-title">총 수입</h5><p class="card-text fs-4" id="total-income">0원</p></div></div></div>
@@ -80,7 +101,6 @@
                         <tbody id="transaction-list-table"></tbody>
                     </table>
                 </div>
-                <!-- [추가된 코드] 페이지네이션 버튼과 정보 표시 영역 -->
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <div>
                         <span id="page-info"></span>

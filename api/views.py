@@ -1,6 +1,7 @@
 import csv
 from django.http import HttpResponse
-from django.db.models import Q, F
+from django.db.models import Q, F, Sum, Value, DecimalField
+from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -39,7 +40,7 @@ def user_list(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
-# --- CSV 내보내기 뷰 (성능 개선 적용) ---
+# --- CSV 내보내기 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
@@ -47,15 +48,10 @@ def export_reservations_csv(request):
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
     writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
-    
-    # [성능 개선] select_related 적용
-    base_queryset = Reservation.objects.select_related('customer', 'manager')
-    
     if request.user.is_superuser:
-        reservations = base_queryset.all().order_by(F('start_date').desc(nulls_last=True))
+        reservations = Reservation.objects.select_related('customer', 'manager').order_by(F('start_date').desc(nulls_last=True))
     else:
-        reservations = base_queryset.filter(manager=request.user).order_by(F('start_date').desc(nulls_last=True))
-        
+        reservations = Reservation.objects.select_related('customer', 'manager').filter(manager=request.user).order_by(F('start_date').desc(nulls_last=True))
     for res in reservations:
         writer.writerow([
             res.id, res.get_category_display(), res.tour_name,
@@ -66,7 +62,7 @@ def export_reservations_csv(request):
         ])
     return response
 
-# --- Customer 관련 뷰 (페이지네이션 적용) ---
+# --- Customer 관련 뷰 ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def customer_list(request):
@@ -77,14 +73,11 @@ def customer_list(request):
             queryset = queryset.filter(
                 Q(name__icontains=search_query) | Q(phone_number__icontains=search_query)
             )
-        
         paginator = PageNumberPagination()
         paginator.page_size = 50
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-id'), request)
-        
         serializer = CustomerSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
-
     elif request.method == 'POST':
         serializer = CustomerSerializer(data=request.data)
         if serializer.is_valid():
@@ -112,13 +105,12 @@ def customer_detail(request, pk):
         customer.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# --- Reservation 관련 뷰 (성능 개선 및 페이지네이션 적용) ---
+# --- Reservation 관련 뷰 ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
         base_queryset = Reservation.objects.select_related('customer', 'manager')
-
         if request.user.is_superuser:
             queryset = base_queryset.all()
         else:
@@ -143,7 +135,6 @@ def reservation_list(request):
         paginator = PageNumberPagination()
         paginator.page_size = 50
         paginated_queryset = paginator.paginate_queryset(queryset.order_by(F('start_date').desc(nulls_last=True)), request)
-        
         serializer = ReservationSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
 
@@ -238,7 +229,41 @@ def partner_detail(request, pk):
         partner.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# --- Transaction 관련 뷰 (성능 개선 및 페이지네이션 적용) ---
+# --- Transaction 관련 뷰 ---
+
+# [새로 추가된 뷰]
+# 전체 기간 또는 특정 월의 수입/지출 합계를 계산하는 API
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def transaction_summary(request):
+    if request.user.is_superuser:
+        queryset = Transaction.objects.all()
+    else:
+        queryset = Transaction.objects.filter(manager=request.user)
+
+    year = request.query_params.get('year')
+    month = request.query_params.get('month')
+
+    if year and month:
+        queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
+
+    summary = queryset.aggregate(
+        total_income=Coalesce(
+            Sum('amount', filter=Q(transaction_type='INCOME')),
+            Value(0),
+            output_field=DecimalField()
+        ),
+        total_expense=Coalesce(
+            Sum('amount', filter=Q(transaction_type='EXPENSE')),
+            Value(0),
+            output_field=DecimalField()
+        )
+    )
+    
+    summary['balance'] = summary['total_income'] - summary['total_expense']
+    
+    return Response(summary)
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
@@ -246,7 +271,6 @@ def transaction_list(request):
         base_queryset = Transaction.objects.select_related(
             'reservation__customer', 'partner', 'manager'
         )
-
         if request.user.is_superuser:
             queryset = base_queryset.all()
         else:
@@ -269,7 +293,6 @@ def transaction_list(request):
         paginator = PageNumberPagination()
         paginator.page_size = 50
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-transaction_date'), request)
-        
         serializer = TransactionSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
 
