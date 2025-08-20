@@ -24,9 +24,12 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     
     try {
         // [수정 사항]
-        // endpoint 끝에 슬래시(/)가 없으면 자동으로 추가하여 주소 형식을 통일합니다.
-        const formattedEndpoint = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-        const url = `${window.API_BASE_URL}/${formattedEndpoint}`;
+        // URL에 파라미터(?가 포함된 경우)가 있어도 올바른 위치에 슬래시(/)를 추가하도록 로직을 개선합니다.
+        const [path, queryString] = endpoint.split('?');
+        const formattedPath = path.endsWith('/') ? path : `${path}/`;
+        const finalEndpoint = queryString ? `${formattedPath}?${queryString}` : formattedPath;
+        
+        const url = `${window.API_BASE_URL}/${finalEndpoint}`;
         
         const response = await fetch(url, config);
         
@@ -64,6 +67,7 @@ window.addEventListener('load', async () => {
     const adminMenu = document.getElementById('admin-menu');
     if (adminMenu) {
         if (!window.location.pathname.endsWith('index.html')) {
+            // user-info 요청 시에도 /가 자동으로 붙도록 수정되었습니다.
             const user = await window.apiFetch('user-info');
             if (user && user.is_superuser) {
                 adminMenu.style.display = 'block';
