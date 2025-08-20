@@ -66,11 +66,33 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td></td>
             `;
             const actionCell = row.cells[7];
+            
+            // [수정 사항] 버튼들을 그룹으로 묶어 관리합니다.
+            const buttonGroup = document.createElement('div');
+            buttonGroup.className = 'btn-group';
+
             const editButton = document.createElement('button');
             editButton.textContent = '수정/상세';
             editButton.className = 'btn btn-sm btn-primary';
             editButton.onclick = () => openReservationModal(res.id);
-            actionCell.appendChild(editButton);
+
+            // [추가된 코드] 삭제 버튼을 생성합니다.
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '삭제';
+            deleteButton.className = 'btn btn-sm btn-danger';
+            deleteButton.onclick = async () => {
+                // 사용자에게 삭제 여부를 다시 한번 확인합니다.
+                if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                    await window.apiFetch(`reservations/${res.id}`, { method: 'DELETE' });
+                    // 삭제 후 현재 페이지의 목록을 새로고침합니다.
+                    populateReservations(currentPage, currentFilters);
+                }
+            };
+            
+            buttonGroup.appendChild(editButton);
+            buttonGroup.appendChild(deleteButton); // 그룹에 삭제 버튼 추가
+            actionCell.appendChild(buttonGroup);
+
             reservationListTable.appendChild(row);
         });
 
@@ -117,7 +139,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="col-md-4"><label for="${prefix}-children" class="form-label">아동</label><input type="number" class="form-control" id="${prefix}-children" value="${details.children || 0}"></div>
                     <div class="col-md-4"><label for="${prefix}-infants" class="form-label">유아</label><input type="number" class="form-control" id="${prefix}-infants" value="${details.infants || 0}"></div>
                 `;
-            // 다른 카테고리에 대한 필드도 동일한 방식으로 추가할 수 있습니다.
             default:
                 return '<div class="col-12"><p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p></div>';
         }
@@ -170,7 +191,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         modalTitle.textContent = `예약 정보 수정 (ID: ${reservationId})`;
         modalBody.innerHTML = renderFormFields('edit-reservation', data);
         
-        // 카테고리 및 상태 드롭다운 채우기
         const categorySelect = document.getElementById('edit-reservation-category');
         const statusSelect = document.getElementById('edit-reservation-status');
         ['TOUR', 'RENTAL_CAR', 'ACCOMMODATION', 'GOLF', 'TICKET', 'OTHER'].forEach(cat => {
@@ -198,7 +218,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 category: form.querySelector('#edit-reservation-category').value,
                 requests: form.querySelector('#edit-reservation-requests').value,
                 notes: form.querySelector('#edit-reservation-notes').value,
-                details: {} // 상세 정보는 카테고리에 따라 동적으로 수집해야 함
+                details: {}
             };
 
             await window.apiFetch(`reservations/${reservationId}`, {
@@ -245,12 +265,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     async function initializePage() {
         await populateReservations(1, {});
         
-        // 새 예약 폼 렌더링
         const formHtml = renderFormFields('new-reservation');
         reservationFormContainer.innerHTML = formHtml;
         await populateCustomersForSelect('new-reservation-customer_id');
         
-        // 새 예약 폼의 카테고리/상태 드롭다운 채우기
         const newCategorySelect = document.getElementById('new-reservation-category');
         const newStatusSelect = document.getElementById('new-reservation-status');
         ['TOUR', 'RENTAL_CAR', 'ACCOMMODATION', 'GOLF', 'TICKET', 'OTHER'].forEach(cat => {
@@ -260,7 +278,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             newStatusSelect.innerHTML += `<option value="${stat}">${stat}</option>`;
         });
 
-        // 새 예약 폼 제출 이벤트 리스너
         const newReservationForm = document.getElementById('new-reservation-form');
         if(newReservationForm){
             newReservationForm.addEventListener('submit', async (e) => {
