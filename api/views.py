@@ -1,14 +1,14 @@
 import csv
 from django.http import HttpResponse
-from django.db.models import Q, F # F 객체 import 추가
+from django.db.models import Q, F
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Customer, Reservation, Partner, Transaction
-# UserRegisterSerializer를 추가로 import
 from .serializers import (
     CustomerSerializer, ReservationSerializer, UserSerializer, 
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
@@ -24,6 +24,13 @@ def register_user(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# --- 사용자 정보 뷰 ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_info(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
 # --- 사용자 목록 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -32,15 +39,7 @@ def user_list(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
-
-# --- 사용자 정보 뷰 ---
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_user_info(request):
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
-
-# --- CSV 내보내기 뷰 ---
+# --- CSV 내보내기 뷰 (성능 개선 적용) ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
@@ -48,10 +47,15 @@ def export_reservations_csv(request):
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
     writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
+    
+    # [성능 개선] select_related 적용
+    base_queryset = Reservation.objects.select_related('customer', 'manager')
+    
     if request.user.is_superuser:
-        reservations = Reservation.objects.all().order_by(F('start_date').desc(nulls_last=True))
+        reservations = base_queryset.all().order_by(F('start_date').desc(nulls_last=True))
     else:
-        reservations = Reservation.objects.filter(manager=request.user).order_by(F('start_date').desc(nulls_last=True))
+        reservations = base_queryset.filter(manager=request.user).order_by(F('start_date').desc(nulls_last=True))
+        
     for res in reservations:
         writer.writerow([
             res.id, res.get_category_display(), res.tour_name,
@@ -62,7 +66,7 @@ def export_reservations_csv(request):
         ])
     return response
 
-# --- Customer 관련 뷰 ---
+# --- Customer 관련 뷰 (페이지네이션 적용) ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def customer_list(request):
@@ -73,8 +77,14 @@ def customer_list(request):
             queryset = queryset.filter(
                 Q(name__icontains=search_query) | Q(phone_number__icontains=search_query)
             )
-        serializer = CustomerSerializer(queryset.order_by('-id'), many=True)
-        return Response(serializer.data)
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        paginated_queryset = paginator.paginate_queryset(queryset.order_by('-id'), request)
+        
+        serializer = CustomerSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
     elif request.method == 'POST':
         serializer = CustomerSerializer(data=request.data)
         if serializer.is_valid():
@@ -102,15 +112,17 @@ def customer_detail(request, pk):
         customer.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# --- Reservation 관련 뷰 (수정된 부분) ---
+# --- Reservation 관련 뷰 (성능 개선 및 페이지네이션 적용) ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
+        base_queryset = Reservation.objects.select_related('customer', 'manager')
+
         if request.user.is_superuser:
-            queryset = Reservation.objects.all()
+            queryset = base_queryset.all()
         else:
-            queryset = Reservation.objects.filter(manager=request.user)
+            queryset = base_queryset.filter(manager=request.user)
         
         category = request.query_params.get('category', None)
         search = request.query_params.get('search', None)
@@ -128,9 +140,12 @@ def reservation_list(request):
         if start_date_lte:
             queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
 
-        # NULL 값을 마지막으로 보내는 방식으로 정렬 순서를 안전하게 변경
-        serializer = ReservationSerializer(queryset.order_by(F('start_date').desc(nulls_last=True)), many=True)
-        return Response(serializer.data)
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        paginated_queryset = paginator.paginate_queryset(queryset.order_by(F('start_date').desc(nulls_last=True)), request)
+        
+        serializer = ReservationSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     elif request.method == 'POST':
         data = request.data.copy()
@@ -223,15 +238,20 @@ def partner_detail(request, pk):
         partner.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# --- Transaction 관련 뷰 ---
+# --- Transaction 관련 뷰 (성능 개선 및 페이지네이션 적용) ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     if request.method == 'GET':
+        base_queryset = Transaction.objects.select_related(
+            'reservation__customer', 'partner', 'manager'
+        )
+
         if request.user.is_superuser:
-            queryset = Transaction.objects.all()
+            queryset = base_queryset.all()
         else:
-            queryset = Transaction.objects.filter(manager=request.user)
+            queryset = base_queryset.filter(manager=request.user)
+        
         search_query = request.query_params.get('search', None)
         date_after = request.query_params.get('date_after', None)
         date_before = request.query_params.get('date_before', None)
@@ -245,8 +265,14 @@ def transaction_list(request):
             queryset = queryset.filter(transaction_date__gte=date_after)
         if date_before:
             queryset = queryset.filter(transaction_date__lte=date_before)
-        serializer = TransactionSerializer(queryset.order_by('-transaction_date'), many=True)
-        return Response(serializer.data)
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        paginated_queryset = paginator.paginate_queryset(queryset.order_by('-transaction_date'), request)
+        
+        serializer = TransactionSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
     elif request.method == 'POST':
         serializer = TransactionSerializer(data=request.data)
         if serializer.is_valid():
