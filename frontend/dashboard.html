@@ -16,8 +16,15 @@
         <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link active" href="dashboard.html"><i class="bi bi-grid-fill"></i>대시보드</a></li>
             <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill"></i>고객 관리</a></li>
-            <li class="nav-item"><a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill"></i>예약 관리</a></li>
-			<li class="nav-item"><a class="nav-link" href="bulk_upload.html"><i class="bi bi-upload"></i> 일괄 등록</a></li>
+            
+            <!-- 예약 관리 메뉴와 하위 메뉴 구조 -->
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
+                </ul>
+            </li>
+            
             <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill"></i>리포트</a></li>
             <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building"></i>제휴업체 관리</a></li>
             <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill"></i>회계 관리</a></li>
@@ -35,9 +42,7 @@
         </div>
 
         <!-- 카테고리별 매출 카드 영역 -->
-        <div id="category-sales-cards" class="row mb-4">
-            <!-- 자바스크립트가 여기에 카테고리별 매출 카드를 동적으로 생성합니다. -->
-        </div>
+        <div id="category-sales-cards" class="row mb-4"></div>
 
         <div class="row">
             <div class="col-xl-12 mb-4">

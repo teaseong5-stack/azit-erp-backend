@@ -2,7 +2,7 @@ body {
     display: flex;
     min-height: 100vh;
     background-color: #f8f9fa;
-    font-family: 'Pretendard', sans-serif; /* 더 선명한 최신 폰트 적용 */
+    font-family: 'Pretendard', sans-serif;
 }
 
 .sidebar {
@@ -47,7 +47,7 @@ body {
 }
 
 .content {
-    margin-left: 280px; /* Sidebar width */
+    margin-left: 280px;
     padding: 30px;
     width: calc(100% - 280px);
 }
@@ -89,7 +89,6 @@ body {
     color: #343a40;
 }
 
-
 /* --- 테이블 컨테이너 스타일 --- */
 .table-container {
     max-height: 800px;
@@ -112,9 +111,35 @@ body.is-admin #admin-menu {
     display: flex;
 }
 
-/* --- [추가된 코드] 캘린더 디자인 개선 --- */
+/* --- 사이드바 하위 메뉴 스타일 --- */
+.nav-item.has-submenu {
+    position: relative;
+}
 
-/* 캘린더 전체 컨테이너 */
+.submenu {
+    display: none;
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    background-color: #2c3136;
+}
+
+.nav-item.has-submenu:hover > .submenu {
+    display: block;
+}
+
+.submenu li a.nav-link {
+    padding-left: 40px;
+    font-size: 1em;
+    color: #adb5bd;
+}
+
+.submenu li a.nav-link:hover {
+    color: #ffffff;
+    background-color: #495057;
+}
+
+/* --- 캘린더 디자인 개선 --- */
 .fc {
     border-radius: 0.75rem;
     border: 1px solid #dee2e6;
@@ -123,7 +148,6 @@ body.is-admin #admin-menu {
     background-color: #fff;
 }
 
-/* 캘린더 헤더 (제목, 버튼) */
 .fc .fc-toolbar.fc-header-toolbar {
     margin-bottom: 1.5rem;
 }
@@ -155,17 +179,14 @@ body.is-admin #admin-menu {
     color: #fff;
 }
 
-/* 캘린더 날짜 셀 */
 .fc-daygrid-day {
     border-color: #f1f3f5;
 }
 
-/* 오늘 날짜 하이라이트 */
 .fc .fc-daygrid-day.fc-day-today {
     background-color: rgba(13, 110, 253, 0.07);
 }
 
-/* 이벤트 아이템 */
 .fc-daygrid-event {
     border-radius: 5px;
     padding: 3px 6px;
