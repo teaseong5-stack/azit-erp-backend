@@ -210,8 +210,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     
-    window.apiFetch('reservations').then(reservations => {
-        if(reservations) {
+    // [수정 사항]
+    // 페이지네이션이 적용되었으므로, 모든 예약 데이터를 가져오기 위해 ?page_size=10000 과 같은 파라미터를 추가합니다.
+    // (대시보드는 모든 데이터를 기반으로 통계를 내야 하므로 페이지네이션을 사용하지 않는 것이 더 적합합니다.)
+    window.apiFetch('reservations?page_size=10000').then(response => {
+        // 응답이 있고, results 키가 있는지 확인합니다.
+        if(response && response.results) {
+            // 실제 데이터 목록은 response.results에 들어있습니다.
+            const reservations = response.results;
+            
             const events = formatEvents(reservations);
             initializeCalendar(events, reservations);
             updateCategorySalesCards(reservations);
