@@ -1,7 +1,8 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // accounting.html 페이지에 있을 때만 이 코드를 실행합니다.
+    // accounting.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('transaction-list-table')) return;
 
+    // --- 1. HTML 요소 및 전역 변수 선언 ---
     const user = await window.apiFetch('user-info');
     const transactionListTable = document.getElementById('transaction-list-table');
     const transactionForm = document.getElementById('transaction-form');
@@ -29,22 +30,27 @@ document.addEventListener("DOMContentLoaded", async function() {
     const editReservationSelect = document.getElementById('edit-trans-reservation');
     const editPartnerSelect = document.getElementById('edit-trans-partner');
 
-    // 거래 종류(수입/지출) 변경 시 지출항목 필드 표시/숨김 처리
-    transTypeSelect.addEventListener('change', () => {
-        expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
-    });
+    // 페이지네이션 관련 요소 및 상태 변수
+    const prevPageButton = document.getElementById('prev-page-button');
+    const nextPageButton = document.getElementById('next-page-button');
+    const pageInfo = document.getElementById('page-info');
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentFilters = {};
 
-    // 드롭다운 메뉴 채우기
+    // --- 2. 데이터 로딩 및 화면 구성 함수 ---
+
+    // 드롭다운 메뉴(예약, 제휴업체, 담당자)를 채우는 함수
     async function populateSelectOptions() {
         const [reservations, partners, users] = await Promise.all([
-            window.apiFetch('reservations'),
+            window.apiFetch('reservations?page_size=10000'), // 모든 예약을 가져오기 위해 큰 page_size 사용
             window.apiFetch('partners'),
             (user && user.is_superuser) ? window.apiFetch('users') : Promise.resolve(null)
         ]);
 
         const resOptions = ['<option value="">-- 예약 선택 --</option>'];
-        if (reservations) {
-            reservations.forEach(res => {
+        if (reservations && reservations.results) {
+            reservations.results.forEach(res => {
                 const customerName = res.customer ? res.customer.name : '알 수 없음';
                 resOptions.push(`<option value="${res.id}">[${res.id}] ${res.tour_name} - ${customerName}</option>`);
             });
@@ -71,12 +77,25 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // 거래 내역 목록 및 현황판 업데이트
-    async function populateTransactions(filters = {}) {
-        const queryString = new URLSearchParams(filters).toString();
-        const transactions = await window.apiFetch(`transactions?${queryString}`);
+    // 거래 내역 목록 및 현황판을 업데이트하는 함수
+    async function populateTransactions(page = 1, filters = {}) {
+        currentFilters = filters;
+        let params = new URLSearchParams({ page, ...filters });
+        const queryString = params.toString();
+        
+        const response = await window.apiFetch(`transactions?${queryString}`);
         transactionListTable.innerHTML = '';
-        if (!transactions) return;
+
+        if (!response || !response.results) {
+            pageInfo.textContent = '데이터가 없습니다.';
+            prevPageButton.disabled = true;
+            nextPageButton.disabled = true;
+            return;
+        }
+        
+        const transactions = response.results;
+        const totalCount = response.count;
+        totalPages = Math.ceil(totalCount / 50);
 
         let totalIncome = 0;
         let totalExpense = 0;
@@ -129,7 +148,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                         };
                         await window.apiFetch(`transactions/${trans.id}`, { method: 'PUT', body: JSON.stringify(updatedData) });
                         editModal.hide();
-                        populateTransactions();
+                        populateTransactions(currentPage, currentFilters);
                     };
                     editModal.show();
                 };
@@ -139,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 deleteButton.onclick = async () => {
                     if (confirm(`'${trans.description}' 거래 내역을 정말 삭제하시겠습니까?`)) {
                         await window.apiFetch(`transactions/${trans.id}`, { method: 'DELETE' });
-                        populateTransactions();
+                        populateTransactions(currentPage, currentFilters);
                     }
                 };
                 buttonGroup.appendChild(editButton);
@@ -153,9 +172,16 @@ document.addEventListener("DOMContentLoaded", async function() {
         totalIncomeEl.textContent = `${totalIncome.toLocaleString()}원`;
         totalExpenseEl.textContent = `${totalExpense.toLocaleString()}원`;
         balanceEl.textContent = `${(totalIncome - totalExpense).toLocaleString()}원`;
+
+        currentPage = page;
+        pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
+        prevPageButton.disabled = !response.previous;
+        nextPageButton.disabled = !response.next;
     }
 
-    // 새 거래 등록 폼 제출
+    // --- 3. 이벤트 리스너 설정 ---
+
+    // 새 거래 등록 폼 제출 이벤트
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -173,15 +199,21 @@ document.addEventListener("DOMContentLoaded", async function() {
         await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
         transactionForm.reset();
         expenseItemWrapper.style.display = 'none';
-        populateTransactions();
+        populateTransactions(1, currentFilters);
+    });
+    
+    // 거래 종류(수입/지출) 변경 시 이벤트
+    transTypeSelect.addEventListener('change', () => {
+        expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
     });
 
+    // 필터 적용 함수
     function applyFilters() {
         const filters = {};
         if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
         if (filterStartDate.value) filters.date_after = filterStartDate.value;
         if (filterEndDate.value) filters.date_before = filterEndDate.value;
-        populateTransactions(filters);
+        populateTransactions(1, filters);
     }
 
     filterButton.addEventListener('click', applyFilters);
@@ -191,10 +223,26 @@ document.addEventListener("DOMContentLoaded", async function() {
         filterSearchInput.value = '';
         filterStartDate.value = '';
         filterEndDate.value = '';
-        populateTransactions();
+        populateTransactions(1, {});
     });
 
-    // 페이지 초기화
-    populateSelectOptions();
-    populateTransactions();
+    // 페이지네이션 버튼 이벤트
+    prevPageButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            populateTransactions(currentPage - 1, currentFilters);
+        }
+    });
+
+    nextPageButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            populateTransactions(currentPage + 1, currentFilters);
+        }
+    });
+
+    // --- 4. 페이지 초기화 실행 ---
+    async function initializePage() {
+        await populateSelectOptions();
+        await populateTransactions(1, {});
+    }
+    initializePage();
 });
