@@ -23,11 +23,24 @@ document.addEventListener("DOMContentLoaded", async function() {
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
+    
+    // 상태 변수
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
+    let allCustomers = []; // 모든 고객 정보를 저장할 배열
 
     // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
+
+    /**
+     * 서버에서 모든 고객 정보를 한 번만 불러와 전역 변수에 저장하는 함수
+     */
+    async function fetchAllCustomers() {
+        const response = await window.apiFetch('customers?page_size=10000');
+        if (response && response.results) {
+            allCustomers = response.results;
+        }
+    }
 
     /**
      * 서버에서 예약 목록을 가져와 테이블에 표시하는 함수
@@ -66,8 +79,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td></td>
             `;
             const actionCell = row.cells[7];
-            
-            // [수정 사항] 버튼들을 그룹으로 묶어 관리합니다.
             const buttonGroup = document.createElement('div');
             buttonGroup.className = 'btn-group';
 
@@ -76,23 +87,19 @@ document.addEventListener("DOMContentLoaded", async function() {
             editButton.className = 'btn btn-sm btn-primary';
             editButton.onclick = () => openReservationModal(res.id);
 
-            // [추가된 코드] 삭제 버튼을 생성합니다.
             const deleteButton = document.createElement('button');
             deleteButton.textContent = '삭제';
             deleteButton.className = 'btn btn-sm btn-danger';
             deleteButton.onclick = async () => {
-                // 사용자에게 삭제 여부를 다시 한번 확인합니다.
-                if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?`)) {
                     await window.apiFetch(`reservations/${res.id}`, { method: 'DELETE' });
-                    // 삭제 후 현재 페이지의 목록을 새로고침합니다.
                     populateReservations(currentPage, currentFilters);
                 }
             };
             
             buttonGroup.appendChild(editButton);
-            buttonGroup.appendChild(deleteButton); // 그룹에 삭제 버튼 추가
+            buttonGroup.appendChild(deleteButton);
             actionCell.appendChild(buttonGroup);
-
             reservationListTable.appendChild(row);
         });
 
@@ -103,27 +110,57 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     /**
-     * Select 드롭다운에 고객 목록을 채우는 함수
-     * @param {string} selectElementId - 고객 목록을 채울 select 요소의 ID
+     * 검색 가능 드롭다운을 초기화하고 이벤트를 연결하는 함수
+     * @param {string} prefix - 폼 요소 ID의 접두사
      */
-    async function populateCustomersForSelect(selectElementId) {
-        const select = document.getElementById(selectElementId);
-        if (!select) return;
-        
-        const response = await window.apiFetch('customers?page_size=10000');
-        select.innerHTML = '<option value="">-- 고객 선택 --</option>';
+    function initializeSearchableCustomerDropdown(prefix) {
+        const searchInput = document.getElementById(`${prefix}-customer-search`);
+        const resultsContainer = document.getElementById(`${prefix}-customer-results`);
+        const hiddenIdInput = document.getElementById(`${prefix}-customer_id`);
 
-        if (response && response.results) {
-            const customers = response.results;
-            customers.forEach(customer => {
-                select.innerHTML += `<option value="${customer.id}">${customer.name} (${customer.phone_number})</option>`;
-            });
-        }
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            resultsContainer.innerHTML = '';
+            hiddenIdInput.value = ''; // 검색어 변경 시 id 초기화
+
+            if (query.length < 1) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            const filteredCustomers = allCustomers.filter(c => 
+                c.name.toLowerCase().includes(query) || c.phone_number.includes(query)
+            );
+
+            if (filteredCustomers.length > 0) {
+                resultsContainer.style.display = 'block';
+                filteredCustomers.forEach(c => {
+                    const item = document.createElement('a');
+                    item.textContent = `${c.name} (${c.phone_number})`;
+                    item.onclick = () => {
+                        searchInput.value = `${c.name} (${c.phone_number})`;
+                        hiddenIdInput.value = c.id;
+                        resultsContainer.style.display = 'none';
+                    };
+                    resultsContainer.appendChild(item);
+                });
+            } else {
+                resultsContainer.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target)) {
+                resultsContainer.style.display = 'none';
+            }
+        });
     }
 
     /**
      * 예약 폼의 카테고리별 상세 필드를 생성하는 함수
-     * @param {string} prefix - 폼 요소 ID의 접두사 (e.g., 'new-reservation')
+     * @param {string} prefix - 폼 요소 ID의 접두사
      * @param {string} category - 선택된 카테고리
      * @param {object} details - 기존 상세 정보 데이터
      * @returns {string} - 생성된 HTML 문자열
@@ -154,11 +191,18 @@ document.addEventListener("DOMContentLoaded", async function() {
         const details = data.details || {};
         const category = data.category || 'TOUR';
         
-        let formHtml = `
+        return `
             <form id="${prefix}-form">
                 <div class="row g-3">
                     <div class="col-md-6"><label for="${prefix}-tour_name" class="form-label">상품명</label><input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required></div>
-                    <div class="col-md-6"><label for="${prefix}-customer_id" class="form-label">고객</label><select class="form-select" id="${prefix}-customer_id" required></select></div>
+                    <div class="col-md-6">
+                        <label for="${prefix}-customer-search" class="form-label">고객</label>
+                        <div class="searchable-dropdown">
+                            <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 이름 또는 연락처로 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number})` : ''}" required>
+                            <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
+                            <div class="dropdown-content" id="${prefix}-customer-results"></div>
+                        </div>
+                    </div>
                     <div class="col-md-6"><label for="${prefix}-start_date" class="form-label">시작일</label><input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}"></div>
                     <div class="col-md-6"><label for="${prefix}-end_date" class="form-label">종료일</label><input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}"></div>
                     <div class="col-md-6"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
@@ -174,10 +218,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="col-12"><label for="${prefix}-notes" class="form-label">내부 메모</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
                 </div>
-                ${prefix !== 'new-reservation' ? `<button type="submit" class="btn btn-primary mt-3">저장</button>` : ''}
             </form>
         `;
-        return formHtml;
     }
 
     /**
@@ -191,6 +233,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         modalTitle.textContent = `예약 정보 수정 (ID: ${reservationId})`;
         modalBody.innerHTML = renderFormFields('edit-reservation', data);
         
+        initializeSearchableCustomerDropdown('edit-reservation');
+        
         const categorySelect = document.getElementById('edit-reservation-category');
         const statusSelect = document.getElementById('edit-reservation-status');
         ['TOUR', 'RENTAL_CAR', 'ACCOMMODATION', 'GOLF', 'TICKET', 'OTHER'].forEach(cat => {
@@ -199,9 +243,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELED'].forEach(stat => {
             statusSelect.innerHTML += `<option value="${stat}" ${data.status === stat ? 'selected' : ''}>${stat}</option>`;
         });
-
-        await populateCustomersForSelect('edit-reservation-customer_id');
-        document.getElementById('edit-reservation-customer_id').value = data.customer ? data.customer.id : '';
 
         modal.show();
 
@@ -263,11 +304,13 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 4. 페이지 초기화 ---
     async function initializePage() {
+        await fetchAllCustomers();
         await populateReservations(1, {});
         
         const formHtml = renderFormFields('new-reservation');
         reservationFormContainer.innerHTML = formHtml;
-        await populateCustomersForSelect('new-reservation-customer_id');
+        
+        initializeSearchableCustomerDropdown('new-reservation');
         
         const newCategorySelect = document.getElementById('new-reservation-category');
         const newStatusSelect = document.getElementById('new-reservation-status');
