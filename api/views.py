@@ -186,20 +186,38 @@ def reservation_bulk_import(request):
     data = request.data
     if not isinstance(data, list):
         return Response({"error": "Input must be a list of reservation objects."}, status=status.HTTP_400_BAD_REQUEST)
+    
     success_count = 0
     errors = []
+    
     for item in data:
+        # [수정] 각 아이템에 manager_id가 있는지 확인하고, 없으면 요청한 사용자로 설정
+        manager_id = item.get('manager_id')
+        manager = None
+        if manager_id:
+            try:
+                manager = User.objects.get(pk=manager_id)
+            except User.DoesNotExist:
+                pass # 담당자를 찾지 못하면 null로 저장됨
+        
+        # 담당자가 지정되지 않았거나, 찾지 못했다면 요청한 사용자로 설정
+        if not manager:
+            manager = request.user
+
         serializer = ReservationSerializer(data=item)
         if serializer.is_valid():
-            serializer.save(manager=request.user)
+            # serializer.save() 호출 시 manager를 직접 전달
+            serializer.save(manager=manager)
             success_count += 1
         else:
-            errors.append(serializer.errors)
+            errors.append({"data": item, "errors": serializer.errors})
+            
     if errors:
         return Response({
             "message": f"{success_count}건 성공, {len(errors)}건 실패.",
             "errors": errors
         }, status=status.HTTP_207_MULTI_STATUS)
+        
     return Response({"message": f"총 {success_count}건의 예약이 성공적으로 등록되었습니다."}, status=status.HTTP_201_CREATED)
 
 @api_view(['GET', 'PUT', 'DELETE'])

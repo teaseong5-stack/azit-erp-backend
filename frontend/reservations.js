@@ -28,13 +28,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
-    let allCustomers = []; // 모든 고객 정보를 저장할 배열
+    let allCustomers = [];
 
-    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
+      // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
 
-    /**
-     * 서버에서 모든 고객 정보를 한 번만 불러와 전역 변수에 저장하는 함수
-     */
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
         if (response && response.results) {
@@ -42,11 +39,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * 서버에서 예약 목록을 가져와 테이블에 표시하는 함수
-     * @param {number} page - 조회할 페이지 번호
-     * @param {object} filters - 적용할 필터 객체
-     */
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
         const params = new URLSearchParams({ page, ...filters });
@@ -109,10 +101,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         nextPageButton.disabled = !response.next;
     }
 
-    /**
-     * 검색 가능 드롭다운을 초기화하고 이벤트를 연결하는 함수
-     * @param {string} prefix - 폼 요소 ID의 접두사
-     */
     function initializeSearchableCustomerDropdown(prefix) {
         const searchInput = document.getElementById(`${prefix}-customer-search`);
         const resultsContainer = document.getElementById(`${prefix}-customer-results`);
@@ -123,7 +111,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         searchInput.addEventListener('input', () => {
             const query = searchInput.value.toLowerCase();
             resultsContainer.innerHTML = '';
-            hiddenIdInput.value = ''; // 검색어 변경 시 id 초기화
+            hiddenIdInput.value = '';
 
             if (query.length < 1) {
                 resultsContainer.style.display = 'none';
@@ -152,20 +140,14 @@ document.addEventListener("DOMContentLoaded", async function() {
         });
 
         document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target)) {
+            if (e.target !== searchInput) {
                 resultsContainer.style.display = 'none';
             }
         });
     }
 
-    /**
-     * 예약 폼의 카테고리별 상세 필드를 생성하는 함수
-     * @param {string} prefix - 폼 요소 ID의 접두사
-     * @param {string} category - 선택된 카테고리
-     * @param {object} details - 기존 상세 정보 데이터
-     * @returns {string} - 생성된 HTML 문자열
-     */
     function getCategoryFields(prefix, category, details = {}) {
+        // [수정] 모든 카테고리에 대한 상세 필드를 정의합니다.
         switch (category) {
             case 'TOUR':
                 return `
@@ -176,17 +158,30 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="col-md-4"><label for="${prefix}-children" class="form-label">아동</label><input type="number" class="form-control" id="${prefix}-children" value="${details.children || 0}"></div>
                     <div class="col-md-4"><label for="${prefix}-infants" class="form-label">유아</label><input type="number" class="form-control" id="${prefix}-infants" value="${details.infants || 0}"></div>
                 `;
+            case 'RENTAL_CAR':
+                return `
+                    <div class="col-md-4"><label for="${prefix}-carType" class="form-label">차량 종류</label><input type="text" class="form-control" id="${prefix}-carType" value="${details.carType || ''}"></div>
+                    <div class="col-md-4"><label for="${prefix}-usageHours" class="form-label">이용 시간</label><input type="number" class="form-control" id="${prefix}-usageHours" value="${details.usageHours || 0}"></div>
+                `;
+            case 'ACCOMMODATION':
+                 return `
+                    <div class="col-md-4"><label for="${prefix}-roomType" class="form-label">방 종류</label><input type="text" class="form-control" id="${prefix}-roomType" value="${details.roomType || ''}"></div>
+                    <div class="col-md-4"><label for="${prefix}-guests" class="form-label">인원수</label><input type="number" class="form-control" id="${prefix}-guests" value="${details.guests || 0}"></div>
+                `;
             default:
                 return '<div class="col-12"><p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p></div>';
         }
     }
+    
+    // [새 함수] 카테고리 변경 시 상세 정보 필드를 다시 렌더링하는 함수
+    function handleCategoryChange(prefix) {
+        const categorySelect = document.getElementById(`${prefix}-category`);
+        const detailsContainer = document.getElementById(`${prefix}-details-container`);
+        if (categorySelect && detailsContainer) {
+            detailsContainer.innerHTML = getCategoryFields(prefix, categorySelect.value, {});
+        }
+    }
 
-    /**
-     * 새 예약 또는 수정 폼의 전체 HTML을 생성하는 함수
-     * @param {string} prefix - 폼 요소 ID의 접두사
-     * @param {object} data - 기존 예약 데이터 (수정 시 사용)
-     * @returns {string} - 생성된 HTML 폼 문자열
-     */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
@@ -222,10 +217,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         `;
     }
 
-    /**
-     * 예약 수정/상세보기 모달을 열고 데이터를 채우는 함수
-     * @param {number} reservationId - 조회할 예약의 ID
-     */
     async function openReservationModal(reservationId) {
         const data = await window.apiFetch(`reservations/${reservationId}`);
         if (!data) return;
@@ -243,6 +234,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELED'].forEach(stat => {
             statusSelect.innerHTML += `<option value="${stat}" ${data.status === stat ? 'selected' : ''}>${stat}</option>`;
         });
+
+        // [추가] 수정 모달에서도 카테고리 변경 이벤트를 연결합니다.
+        categorySelect.addEventListener('change', () => handleCategoryChange('edit-reservation'));
 
         modal.show();
 
@@ -320,6 +314,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELED'].forEach(stat => {
             newStatusSelect.innerHTML += `<option value="${stat}">${stat}</option>`;
         });
+
+        // [추가] 새 예약 폼에 카테고리 변경 이벤트를 연결합니다.
+        newCategorySelect.addEventListener('change', () => handleCategoryChange('new-reservation'));
 
         const newReservationForm = document.getElementById('new-reservation-form');
         if(newReservationForm){

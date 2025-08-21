@@ -1,7 +1,24 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", async function() {
     const uploadButton = document.getElementById('upload-button');
     const dataInput = document.getElementById('bulk-data-input');
     const resultLog = document.getElementById('result-log');
+
+    // [추가] 고객 및 담당자 이름-ID 매칭을 위한 데이터 로딩
+    let allCustomers = [];
+    let allUsers = [];
+
+    async function fetchDataForMapping() {
+        const [customerResponse, userResponse] = await Promise.all([
+            window.apiFetch('customers?page_size=10000'),
+            window.apiFetch('users')
+        ]);
+        if (customerResponse && customerResponse.results) {
+            allCustomers = customerResponse.results;
+        }
+        if (userResponse) {
+            allUsers = userResponse;
+        }
+    }
 
     uploadButton.addEventListener('click', async () => {
         const rawData = dataInput.value.trim();
@@ -10,37 +27,45 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        // 데이터를 줄 단위로 나누고, 첫 번째 줄(헤더)은 제외합니다.
         const rows = rawData.split('\n').slice(1);
         const reservations = [];
-
         resultLog.textContent = '데이터 변환 중...';
 
         for (const row of rows) {
-            // 탭으로 구분된 데이터를 배열로 변환합니다.
             const columns = row.split('\t');
+            if (columns.length < 11) continue;
+
+            // --- [수정] 새로운 컬럼 순서에 맞춰 데이터 파싱 ---
+            const customerName = columns[1].trim();
+            const managerName = columns[10].trim();
             
-            // 데이터 순서: 상품명, 고객ID, 시작일, 종료일, 판매가, 원가, 카테고리, 성인, 아동, 유아, 요청사항, 내부메모
-            if (columns.length < 7) continue; // 필수 컬럼 수 확인
+            const customer = allCustomers.find(c => c.name === customerName);
+            const manager = allUsers.find(u => u.username === managerName);
+
+            const totalPrice = parseFloat(columns[7]) || 0;
+            const balance = parseFloat(columns[8]) || 0;
+            const paymentAmount = totalPrice - balance;
 
             const reservation = {
-                tour_name: columns[0] || '제목 없음',
-                customer_id: parseInt(columns[1], 10) || null,
-                start_date: columns[2] || null,
-                end_date: columns[3] || null,
-                total_price: parseFloat(columns[4]) || 0,
-                total_cost: parseFloat(columns[5]) || 0,
-                category: columns[6] || 'TOUR',
-                // 상세 정보(details)는 JSON 객체로 구성합니다.
-                details: {
-                    adults: parseInt(columns[7]) || 0,
-                    children: parseInt(columns[8]) || 0,
-                    infants: parseInt(columns[9]) || 0,
-                },
-                requests: columns[10] || '',
-                notes: columns[11] || '',
-                status: 'CONFIRMED' // 기본 상태는 '예약확정'으로 설정
+                customer_id: customer ? customer.id : null,
+                reservation_date: columns[2] || new Date().toISOString().split('T')[0],
+                start_date: columns[3] || null,
+                category: columns[4] || 'TOUR',
+                tour_name: columns[5] || '제목 없음',
+                total_cost: parseFloat(columns[6]) || 0,
+                total_price: totalPrice,
+                payment_amount: paymentAmount,
+                status: columns[9] || 'CONFIRMED',
+                manager_id: manager ? manager.id : null,
+                details: {},
+                requests: '',
+                notes: `일괄 등록된 데이터 (고객명: ${customerName}, 담당자명: ${managerName})`
             };
+            
+            // 고객이나 담당자를 찾지 못한 경우, 로그에 기록
+            if (!customer) reservation.notes += ` [경고: 고객 '${customerName}'을 찾을 수 없음]`;
+            if (!manager) reservation.notes += ` [경고: 담당자 '${managerName}'를 찾을 수 없음]`;
+            
             reservations.push(reservation);
         }
 
@@ -52,7 +77,6 @@ document.addEventListener("DOMContentLoaded", function() {
         resultLog.textContent = `${reservations.length}개의 데이터를 서버로 전송합니다...`;
 
         try {
-            // 백엔드의 일괄 등록 API를 호출합니다.
             const response = await window.apiFetch('reservations/bulk/', {
                 method: 'POST',
                 body: JSON.stringify(reservations)
@@ -60,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (response) {
                 resultLog.textContent = `업로드 성공!\n\n${JSON.stringify(response, null, 2)}`;
-                dataInput.value = ''; // 성공 시 입력창 비우기
+                dataInput.value = '';
             } else {
                 resultLog.textContent = '서버에서 오류가 발생했습니다. 응답을 받지 못했습니다.';
             }
@@ -68,4 +92,6 @@ document.addEventListener("DOMContentLoaded", function() {
             resultLog.textContent = `업로드 중 오류 발생:\n${error}`;
         }
     });
+
+    fetchDataForMapping(); // 페이지 로드 시 이름-ID 매칭 데이터 미리 로드
 });

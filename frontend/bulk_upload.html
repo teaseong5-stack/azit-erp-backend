@@ -39,9 +39,10 @@
                 <p class="card-text">
                     아래 순서에 맞춰 엑셀이나 구글 시트의 데이터를 복사한 후, 텍스트 상자에 붙여넣으세요. (첫 줄은 헤더이므로 제외됩니다.)
                 </p>
+                <!-- [수정] 새로운 컬럼 순서로 안내 문구 변경 -->
                 <div class="alert alert-info">
                     <strong>데이터 순서:</strong><br>
-                    상품명 | 고객ID | 시작일(YYYY-MM-DD) | 종료일(YYYY-MM-DD) | 판매가(숫자만) | 원가(숫자만) | 카테고리 | 성인 | 아동 | 유아 | 요청사항 | 내부메모
+                    No. | 고객명 | 예약일(YYYY-MM-DD) | 시작일(YYYY-MM-DD) | 카테고리 | 상품명 | 매입가 | 판매가 | 잔액 | 상태 | 담당자명
                 </div>
                 <textarea id="bulk-data-input" class="form-control" rows="10" placeholder="여기에 데이터를 붙여넣으세요..."></textarea>
                 <button id="upload-button" class="btn btn-primary mt-3">업로드 시작</button>
