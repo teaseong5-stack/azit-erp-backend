@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             deleteButton.onclick = async () => {
                 if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?`)) {
                     await window.apiFetch(`reservations/${res.id}`, { method: 'DELETE' });
-                    populateReservations(currentPage, currentFilters);
+                    location.reload(); // 삭제 후 전체 페이지 새로고침
                 }
             };
             
@@ -216,12 +216,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
-    /**
-     * [새 함수] 폼에서 카테고리별 상세 정보 값을 수집하는 함수
-     * @param {string} prefix - 폼 요소 ID의 접두사
-     * @param {string} category - 현재 선택된 카테고리
-     * @returns {object} - 수집된 상세 정보 객체
-     */
     function getDetailsFromForm(prefix, category) {
         const details = {};
         const form = document.getElementById(`${prefix}-form`);
@@ -284,7 +278,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             const category = categorySelect.value;
             detailsContainer.innerHTML = getCategoryFields(prefix, category, {});
             
-            // 라벨 텍스트 변경
             if (tourNameLabel) {
                 tourNameLabel.textContent = (category === 'ACCOMMODATION') ? '숙소명' : (category === 'GOLF') ? '골프장명' : '상품명';
             }
@@ -362,6 +355,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             const formData = {
                 tour_name: form.querySelector('#edit-reservation-tour_name').value,
                 customer_id: form.querySelector('#edit-reservation-customer_id').value,
+                reservation_date: form.querySelector('#edit-reservation-reservation_date').value,
                 start_date: form.querySelector('#edit-reservation-start_date').value,
                 end_date: form.querySelector('#edit-reservation-end_date').value,
                 total_price: form.querySelector('#edit-reservation-total_price').value,
@@ -370,16 +364,18 @@ document.addEventListener("DOMContentLoaded", async function() {
                 category: category,
                 requests: form.querySelector('#edit-reservation-requests').value,
                 notes: form.querySelector('#edit-reservation-notes').value,
-                // [수정] 상세 정보 수집 로직 추가
                 details: getDetailsFromForm('edit-reservation', category)
             };
 
-            await window.apiFetch(`reservations/${reservationId}`, {
+            const response = await window.apiFetch(`reservations/${reservationId}`, {
                 method: 'PUT',
                 body: JSON.stringify(formData)
             });
-            modal.hide();
-            populateReservations(currentPage, currentFilters);
+
+            if (response) {
+                modal.hide();
+                location.reload();
+            }
         };
     }
 
@@ -440,6 +436,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 const formData = {
                     tour_name: newReservationForm.querySelector('#new-reservation-tour_name').value,
                     customer_id: newReservationForm.querySelector('#new-reservation-customer_id').value,
+                    reservation_date: newReservationForm.querySelector('#new-reservation-reservation_date').value,
                     start_date: newReservationForm.querySelector('#new-reservation-start_date').value,
                     end_date: newReservationForm.querySelector('#new-reservation-end_date').value,
                     total_price: newReservationForm.querySelector('#new-reservation-total_price').value,
@@ -448,15 +445,17 @@ document.addEventListener("DOMContentLoaded", async function() {
                     category: category,
                     requests: newReservationForm.querySelector('#new-reservation-requests').value,
                     notes: newReservationForm.querySelector('#new-reservation-notes').value,
-                    // [수정] 상세 정보 수집 로직 추가
                     details: getDetailsFromForm('new-reservation', category)
                 };
-                await window.apiFetch('reservations', {
+                
+                const response = await window.apiFetch('reservations', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
-                newReservationForm.reset();
-                populateReservations(1, {});
+
+                if (response) {
+                    location.reload();
+                }
             });
         }
     }
