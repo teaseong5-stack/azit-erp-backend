@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     const chartContainer = document.getElementById('chart-container');
     let reportChart = null;
 
+    // 모든 예약 데이터를 한 번에 가져옵니다.
     const response = await window.apiFetch('reservations?page_size=10000');
     if (!response || !response.results) {
         reportResultDiv.innerHTML = '<p class="text-danger">리포트를 생성할 예약 데이터가 없습니다.</p>';

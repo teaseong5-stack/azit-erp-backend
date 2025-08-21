@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('reservation-list-table')) return;
 
-    // --- 1. 전역 변수 및 HTML 요소 선언 ---
     const user = await window.apiFetch('user-info');
     const reservationListTable = document.getElementById('reservation-list-table');
     const reservationFormContainer = document.getElementById('reservation-form');
@@ -10,27 +8,19 @@ document.addEventListener("DOMContentLoaded", async function() {
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     const modalSaveButton = document.getElementById('modal-save-button');
-    
-    // 필터 요소
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     const exportCsvButton = document.getElementById('export-csv-button');
-
-    // 페이지네이션 요소
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
-    
-    // 상태 변수
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
     let allCustomers = [];
-
-      // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
 
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
@@ -60,17 +50,23 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         reservations.forEach(res => {
             const row = document.createElement('tr');
+            const balance = (res.total_price || 0) - (res.payment_amount || 0);
+
             row.innerHTML = `
                 <td>${res.id}</td>
-                <td>${res.tour_name}</td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
-                <td>${res.manager ? res.manager.username : 'N/A'}</td>
+                <td>${res.reservation_date || 'N/A'}</td>
                 <td>${res.start_date || '미정'}</td>
+                <td>${res.category || 'N/A'}</td>
+                <td>${res.tour_name}</td>
+                <td>${Number(res.total_cost).toLocaleString()}원</td>
                 <td>${Number(res.total_price).toLocaleString()}원</td>
+                <td class="${balance > 0 ? 'text-danger' : 'text-success'} fw-bold">${Number(balance).toLocaleString()}원</td>
                 <td><span class="badge bg-primary">${res.status}</span></td>
+                <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>
             `;
-            const actionCell = row.cells[7];
+            const actionCell = row.cells[11];
             const buttonGroup = document.createElement('div');
             buttonGroup.className = 'btn-group';
 
@@ -147,7 +143,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     function getCategoryFields(prefix, category, details = {}) {
-        // [수정] 모든 카테고리에 대한 상세 필드를 정의합니다.
         switch (category) {
             case 'TOUR':
                 return `
@@ -173,7 +168,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
-    // [새 함수] 카테고리 변경 시 상세 정보 필드를 다시 렌더링하는 함수
     function handleCategoryChange(prefix) {
         const categorySelect = document.getElementById(`${prefix}-category`);
         const detailsContainer = document.getElementById(`${prefix}-details-container`);
@@ -235,7 +229,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             statusSelect.innerHTML += `<option value="${stat}" ${data.status === stat ? 'selected' : ''}>${stat}</option>`;
         });
 
-        // [추가] 수정 모달에서도 카테고리 변경 이벤트를 연결합니다.
         categorySelect.addEventListener('change', () => handleCategoryChange('edit-reservation'));
 
         modal.show();
@@ -264,8 +257,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             populateReservations(currentPage, currentFilters);
         };
     }
-
-    // --- 3. 이벤트 리스너 설정 ---
 
     filterButton.addEventListener('click', () => {
         const filters = {
@@ -296,7 +287,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     });
 
-    // --- 4. 페이지 초기화 ---
     async function initializePage() {
         await fetchAllCustomers();
         await populateReservations(1, {});
@@ -315,7 +305,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             newStatusSelect.innerHTML += `<option value="${stat}">${stat}</option>`;
         });
 
-        // [추가] 새 예약 폼에 카테고리 변경 이벤트를 연결합니다.
         newCategorySelect.addEventListener('change', () => handleCategoryChange('new-reservation'));
 
         const newReservationForm = document.getElementById('new-reservation-form');
