@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     const chartContainer = document.getElementById('chart-container');
     let reportChart = null;
 
-    // [수정] 모든 예약 데이터를 한 번에 가져옵니다.
     const response = await window.apiFetch('reservations?page_size=10000');
     if (!response || !response.results) {
         reportResultDiv.innerHTML = '<p class="text-danger">리포트를 생성할 예약 데이터가 없습니다.</p>';
@@ -21,11 +20,10 @@ document.addEventListener("DOMContentLoaded", async function() {
      */
     function generateReport() {
         const reportType = reportTypeSelect.value;
-        reportResultDiv.innerHTML = ''; // 이전 결과 초기화
-        chartContainer.innerHTML = '<canvas id="reportChart"></canvas>'; // 차트 캔버스 재생성
+        reportResultDiv.innerHTML = '';
+        chartContainer.innerHTML = '<canvas id="reportChart"></canvas>';
         const ctx = document.getElementById('reportChart').getContext('2d');
 
-        // [수정] reservations.filter 대신 allReservations.filter를 사용합니다.
         const activeReservations = allReservations.filter(res => res.status !== 'CANCELED');
 
         if (reportChart) {
@@ -126,7 +124,5 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     generateReportButton.addEventListener('click', generateReport);
-
-    // 페이지 로드 시 기본 리포트 생성
     generateReport();
 });

@@ -33,10 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 date.setDate(date.getDate() + 1);
                 endDate = date.toISOString().split('T')[0];
             }
-            
-            // [수정 사항] res.customer가 null일 경우를 대비하여 방어 코드를 추가합니다.
             const customerName = res.customer ? res.customer.name : '고객 미지정';
-
             return {
                 id: res.id,
                 title: `[${customerName}] ${res.tour_name}`,
@@ -72,10 +69,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 const reservationId = info.event.id;
                 const res = allReservations.find(r => r.id == reservationId);
                 if (res) {
-                    // [수정 사항] 고객 정보가 null일 경우를 대비하여 방어 코드를 추가합니다.
                     const customerName = res.customer ? res.customer.name : '고객 미지정';
                     const customerPhone = res.customer ? res.customer.phone_number : '정보 없음';
-
                     let detailsHtml = `
                         <div class="row">
                             <div class="col-md-6">

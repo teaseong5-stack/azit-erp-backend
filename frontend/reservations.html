@@ -38,7 +38,6 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h2 class="card-title">새 예약 등록</h2>
-                <!-- 예약 등록 폼 -->
                 <form id="reservation-form" class="mb-3"></form>
                 
                 <h3 class="mt-4">예약 목록</h3>
@@ -52,16 +51,21 @@
                 </div>
                 
                 <div class="table-responsive table-container">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-striped table-hover table-sm">
+                        <!-- [수정] 테이블 헤더 컬럼 변경 -->
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>상품명</th>
+                                <th>No.</th>
                                 <th>고객명</th>
-                                <th>담당자</th>
+                                <th>예약일</th>
                                 <th>시작일</th>
+                                <th>카테고리</th>
+                                <th>상품명</th>
+                                <th>매입가</th>
                                 <th>판매가</th>
+                                <th>잔액</th>
                                 <th>상태</th>
+                                <th>담당</th>
                                 <th>관리</th>
                             </tr>
                         </thead>
