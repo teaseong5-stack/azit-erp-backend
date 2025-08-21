@@ -216,11 +216,81 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
+    /**
+     * [새 함수] 폼에서 카테고리별 상세 정보 값을 수집하는 함수
+     * @param {string} prefix - 폼 요소 ID의 접두사
+     * @param {string} category - 현재 선택된 카테고리
+     * @returns {object} - 수집된 상세 정보 객체
+     */
+    function getDetailsFromForm(prefix, category) {
+        const details = {};
+        const form = document.getElementById(`${prefix}-form`);
+        if (!form) return details;
+
+        const getFieldValue = (id) => form.querySelector(`#${prefix}-${id}`)?.value;
+
+        switch (category) {
+            case 'TOUR':
+                details.startTime = getFieldValue('startTime');
+                details.pickupLocation = getFieldValue('pickupLocation');
+                details.dropoffLocation = getFieldValue('dropoffLocation');
+                details.adults = getFieldValue('adults');
+                details.children = getFieldValue('children');
+                details.infants = getFieldValue('infants');
+                break;
+            case 'RENTAL_CAR':
+                details.carType = getFieldValue('carType');
+                details.usageHours = getFieldValue('usageHours');
+                details.startTime = getFieldValue('startTime');
+                details.pickupLocation = getFieldValue('pickupLocation');
+                details.dropoffLocation = getFieldValue('dropoffLocation');
+                details.adults = getFieldValue('adults');
+                details.children = getFieldValue('children');
+                details.infants = getFieldValue('infants');
+                break;
+            case 'ACCOMMODATION':
+                details.roomType = getFieldValue('roomType');
+                details.nights = getFieldValue('nights');
+                details.roomCount = getFieldValue('roomCount');
+                details.guests = getFieldValue('guests');
+                break;
+            case 'GOLF':
+                details.teeOffTime = getFieldValue('teeOffTime');
+                details.players = getFieldValue('players');
+                break;
+            case 'TICKET':
+                details.usageTime = getFieldValue('usageTime');
+                details.adults = getFieldValue('adults');
+                details.children = getFieldValue('children');
+                details.infants = getFieldValue('infants');
+                break;
+            case 'OTHER':
+                details.usageTime = getFieldValue('usageTime');
+                details.adults = getFieldValue('adults');
+                details.children = getFieldValue('children');
+                details.infants = getFieldValue('infants');
+                break;
+        }
+        return details;
+    }
+
     function handleCategoryChange(prefix) {
         const categorySelect = document.getElementById(`${prefix}-category`);
         const detailsContainer = document.getElementById(`${prefix}-details-container`);
+        const tourNameLabel = document.querySelector(`label[for='${prefix}-tour_name']`);
+        const startDateLabel = document.querySelector(`label[for='${prefix}-start_date']`);
+        
         if (categorySelect && detailsContainer) {
-            detailsContainer.innerHTML = getCategoryFields(prefix, categorySelect.value, {});
+            const category = categorySelect.value;
+            detailsContainer.innerHTML = getCategoryFields(prefix, category, {});
+            
+            // 라벨 텍스트 변경
+            if (tourNameLabel) {
+                tourNameLabel.textContent = (category === 'ACCOMMODATION') ? '숙소명' : (category === 'GOLF') ? '골프장명' : '상품명';
+            }
+            if (startDateLabel) {
+                startDateLabel.textContent = (category === 'GOLF') ? '라운딩일자' : (category === 'ACCOMMODATION' ? '체크인' : '출발일');
+            }
         }
     }
 
@@ -260,7 +330,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="col-12"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
                 </div>
-                <!-- [수정] 새 예약 폼일 경우에만 등록 버튼을 표시합니다. -->
                 ${prefix === 'new-reservation' ? '<button type="submit" class="btn btn-primary mt-3">예약 등록</button>' : ''}
             </form>
         `;
@@ -289,6 +358,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         modalSaveButton.onclick = async () => {
             const form = document.getElementById('edit-reservation-form');
+            const category = form.querySelector('#edit-reservation-category').value;
             const formData = {
                 tour_name: form.querySelector('#edit-reservation-tour_name').value,
                 customer_id: form.querySelector('#edit-reservation-customer_id').value,
@@ -297,10 +367,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                 total_price: form.querySelector('#edit-reservation-total_price').value,
                 total_cost: form.querySelector('#edit-reservation-total_cost').value,
                 status: form.querySelector('#edit-reservation-status').value,
-                category: form.querySelector('#edit-reservation-category').value,
+                category: category,
                 requests: form.querySelector('#edit-reservation-requests').value,
                 notes: form.querySelector('#edit-reservation-notes').value,
-                details: {}
+                // [수정] 상세 정보 수집 로직 추가
+                details: getDetailsFromForm('edit-reservation', category)
             };
 
             await window.apiFetch(`reservations/${reservationId}`, {
@@ -365,6 +436,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         if(newReservationForm){
             newReservationForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const category = newReservationForm.querySelector('#new-reservation-category').value;
                 const formData = {
                     tour_name: newReservationForm.querySelector('#new-reservation-tour_name').value,
                     customer_id: newReservationForm.querySelector('#new-reservation-customer_id').value,
@@ -373,10 +445,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                     total_price: newReservationForm.querySelector('#new-reservation-total_price').value,
                     total_cost: newReservationForm.querySelector('#new-reservation-total_cost').value,
                     status: newReservationForm.querySelector('#new-reservation-status').value,
-                    category: newReservationForm.querySelector('#new-reservation-category').value,
+                    category: category,
                     requests: newReservationForm.querySelector('#new-reservation-requests').value,
                     notes: newReservationForm.querySelector('#new-reservation-notes').value,
-                    details: {}
+                    // [수정] 상세 정보 수집 로직 추가
+                    details: getDetailsFromForm('new-reservation', category)
                 };
                 await window.apiFetch('reservations', {
                     method: 'POST',
