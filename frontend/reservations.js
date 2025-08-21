@@ -260,6 +260,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="col-12"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
                 </div>
+                <!-- [수정] 새 예약 폼일 경우에만 등록 버튼을 표시합니다. -->
+                ${prefix === 'new-reservation' ? '<button type="submit" class="btn btn-primary mt-3">예약 등록</button>' : ''}
             </form>
         `;
     }
