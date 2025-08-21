@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", async function() {
+    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('reservation-list-table')) return;
 
+    // --- 1. 전역 변수 및 HTML 요소 선언 ---
     const user = await window.apiFetch('user-info');
     const reservationListTable = document.getElementById('reservation-list-table');
     const reservationFormContainer = document.getElementById('reservation-form');
@@ -21,6 +23,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
     let allCustomers = [];
+
+    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
 
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
@@ -143,25 +147,69 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     function getCategoryFields(prefix, category, details = {}) {
+        const commonFields = `
+            <div class="col-md-4"><label for="${prefix}-adults" class="form-label">성인</label><input type="number" class="form-control" id="${prefix}-adults" value="${details.adults || 0}"></div>
+            <div class="col-md-4"><label for="${prefix}-children" class="form-label">아동</label><input type="number" class="form-control" id="${prefix}-children" value="${details.children || 0}"></div>
+            <div class="col-md-4"><label for="${prefix}-infants" class="form-label">유아</label><input type="number" class="form-control" id="${prefix}-infants" value="${details.infants || 0}"></div>
+        `;
+
         switch (category) {
             case 'TOUR':
                 return `
                     <div class="col-md-4"><label for="${prefix}-startTime" class="form-label">시작 시간</label><input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}"></div>
                     <div class="col-md-4"><label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label><input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}"></div>
                     <div class="col-md-4"><label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label><input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}"></div>
-                    <div class="col-md-4"><label for="${prefix}-adults" class="form-label">성인</label><input type="number" class="form-control" id="${prefix}-adults" value="${details.adults || 0}"></div>
-                    <div class="col-md-4"><label for="${prefix}-children" class="form-label">아동</label><input type="number" class="form-control" id="${prefix}-children" value="${details.children || 0}"></div>
-                    <div class="col-md-4"><label for="${prefix}-infants" class="form-label">유아</label><input type="number" class="form-control" id="${prefix}-infants" value="${details.infants || 0}"></div>
+                    ${commonFields}
                 `;
             case 'RENTAL_CAR':
                 return `
-                    <div class="col-md-4"><label for="${prefix}-carType" class="form-label">차량 종류</label><input type="text" class="form-control" id="${prefix}-carType" value="${details.carType || ''}"></div>
-                    <div class="col-md-4"><label for="${prefix}-usageHours" class="form-label">이용 시간</label><input type="number" class="form-control" id="${prefix}-usageHours" value="${details.usageHours || 0}"></div>
+                    <div class="col-md-6"><label for="${prefix}-carType" class="form-label">차량 종류</label>
+                        <select id="${prefix}-carType" class="form-select">
+                            <option value="4인승" ${details.carType === '4인승' ? 'selected' : ''}>4인승</option>
+                            <option value="7인승" ${details.carType === '7인승' ? 'selected' : ''}>7인승</option>
+                            <option value="9인승 리무진" ${details.carType === '9인승 리무진' ? 'selected' : ''}>9인승 리무진</option>
+                            <option value="16인승" ${details.carType === '16인승' ? 'selected' : ''}>16인승</option>
+                            <option value="29인승" ${details.carType === '29인승' ? 'selected' : ''}>29인승</option>
+                            <option value="45인승" ${details.carType === '45인승' ? 'selected' : ''}>45인승</option>
+                            <option value="렌터카+가이드" ${details.carType === '렌터카+가이드' ? 'selected' : ''}>렌터카+가이드</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6"><label for="${prefix}-usageHours" class="form-label">이용 시간</label>
+                        <select id="${prefix}-usageHours" class="form-select">
+                            <option value="6시간" ${details.usageHours === '6시간' ? 'selected' : ''}>6시간</option>
+                            <option value="12시간" ${details.usageHours === '12시간' ? 'selected' : ''}>12시간</option>
+                            <option value="픽업" ${details.usageHours === '픽업' ? 'selected' : ''}>픽업</option>
+                            <option value="샌딩" ${details.usageHours === '샌딩' ? 'selected' : ''}>샌딩</option>
+                            <option value="공항픽업" ${details.usageHours === '공항픽업' ? 'selected' : ''}>공항픽업</option>
+                            <option value="공항샌딩" ${details.usageHours === '공항샌딩' ? 'selected' : ''}>공항샌딩</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label for="${prefix}-startTime" class="form-label">시작 시간</label><input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}"></div>
+                    <div class="col-md-4"><label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label><input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}"></div>
+                    <div class="col-md-4"><label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label><input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}"></div>
+                    ${commonFields}
                 `;
             case 'ACCOMMODATION':
                  return `
                     <div class="col-md-4"><label for="${prefix}-roomType" class="form-label">방 종류</label><input type="text" class="form-control" id="${prefix}-roomType" value="${details.roomType || ''}"></div>
+                    <div class="col-md-2"><label for="${prefix}-nights" class="form-label">숙박일수</label><input type="number" class="form-control" id="${prefix}-nights" value="${details.nights || 1}"></div>
+                    <div class="col-md-2"><label for="${prefix}-roomCount" class="form-label">룸 수량</label><input type="number" class="form-control" id="${prefix}-roomCount" value="${details.roomCount || 1}"></div>
                     <div class="col-md-4"><label for="${prefix}-guests" class="form-label">인원수</label><input type="number" class="form-control" id="${prefix}-guests" value="${details.guests || 0}"></div>
+                `;
+            case 'GOLF':
+                return `
+                    <div class="col-md-6"><label for="${prefix}-teeOffTime" class="form-label">티오프</label><input type="time" class="form-control" id="${prefix}-teeOffTime" value="${details.teeOffTime || ''}"></div>
+                    <div class="col-md-6"><label for="${prefix}-players" class="form-label">인원수</label><input type="number" class="form-control" id="${prefix}-players" value="${details.players || 0}"></div>
+                `;
+            case 'TICKET':
+                return `
+                    <div class="col-md-12"><label for="${prefix}-usageTime" class="form-label">이용 시간</label><input type="time" class="form-control" id="${prefix}-usageTime" value="${details.usageTime || ''}"></div>
+                    ${commonFields}
+                `;
+            case 'OTHER':
+                return `
+                    <div class="col-md-12"><label for="${prefix}-usageTime" class="form-label">이용 시간</label><input type="time" class="form-control" id="${prefix}-usageTime" value="${details.usageTime || ''}"></div>
+                    ${commonFields}
                 `;
             default:
                 return '<div class="col-12"><p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p></div>';
@@ -179,33 +227,38 @@ document.addEventListener("DOMContentLoaded", async function() {
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
+        const productNameLabel = (category === 'ACCOMMODATION') ? '숙소명' : (category === 'GOLF') ? '골프장명' : '상품명';
         
         return `
             <form id="${prefix}-form">
                 <div class="row g-3">
-                    <div class="col-md-6"><label for="${prefix}-tour_name" class="form-label">상품명</label><input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required></div>
-                    <div class="col-md-6">
-                        <label for="${prefix}-customer-search" class="form-label">고객</label>
+                    <div class="col-md-4"><label for="${prefix}-customer-search" class="form-label">고객명</label>
                         <div class="searchable-dropdown">
-                            <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 이름 또는 연락처로 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number})` : ''}" required>
+                            <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number})` : ''}" required>
                             <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
                             <div class="dropdown-content" id="${prefix}-customer-results"></div>
                         </div>
                     </div>
-                    <div class="col-md-6"><label for="${prefix}-start_date" class="form-label">시작일</label><input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}"></div>
-                    <div class="col-md-6"><label for="${prefix}-end_date" class="form-label">종료일</label><input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}"></div>
-                    <div class="col-md-6"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
-                    <div class="col-md-6"><label for="${prefix}-total_cost" class="form-label">원가</label><input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}"></div>
-                    <div class="col-md-6"><label for="${prefix}-status" class="form-label">예약 상태</label><select class="form-select" id="${prefix}-status"></select></div>
-                    <div class="col-md-6"><label for="${prefix}-category" class="form-label">카테고리</label><select class="form-select" id="${prefix}-category"></select></div>
+                    <div class="col-md-4"><label for="${prefix}-category" class="form-label">카테고리</label><select class="form-select" id="${prefix}-category"></select></div>
+                    <div class="col-md-4"><label for="${prefix}-tour_name" class="form-label">${productNameLabel}</label><input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required></div>
+                    
+                    <div class="col-md-4"><label for="${prefix}-reservation_date" class="form-label">예약일</label><input type="date" class="form-control" id="${prefix}-reservation_date" value="${data.reservation_date || new Date().toISOString().split('T')[0]}"></div>
+                    <div class="col-md-4"><label for="${prefix}-start_date" class="form-label">${category === 'GOLF' ? '라운딩일자' : '출발일/체크인'}</label><input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}"></div>
+                    <div class="col-md-4"><label for="${prefix}-end_date" class="form-label">종료일/체크아웃</label><input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}"></div>
+
                     <hr>
                     <h5>상세 정보</h5>
                     <div class="row g-3" id="${prefix}-details-container">
                         ${getCategoryFields(prefix, category, details)}
                     </div>
                     <hr>
-                    <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
-                    <div class="col-12"><label for="${prefix}-notes" class="form-label">내부 메모</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
+                    
+                    <div class="col-md-4"><label for="${prefix}-status" class="form-label">예약 상태</label><select class="form-select" id="${prefix}-status"></select></div>
+                    <div class="col-md-4"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
+                    <div class="col-md-4"><label for="${prefix}-total_cost" class="form-label">원가</label><input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}"></div>
+
+                    <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
+                    <div class="col-12"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
                 </div>
             </form>
         `;
@@ -230,7 +283,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         });
 
         categorySelect.addEventListener('change', () => handleCategoryChange('edit-reservation'));
-
         modal.show();
 
         modalSaveButton.onclick = async () => {
