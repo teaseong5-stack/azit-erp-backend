@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             deleteButton.onclick = async () => {
                 if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?`)) {
                     await window.apiFetch(`reservations/${res.id}`, { method: 'DELETE' });
-                    location.reload(); // 삭제 후 전체 페이지 새로고침
+                    location.reload();
                 }
             };
             
@@ -316,9 +316,10 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                     <hr>
                     
-                    <div class="col-md-4"><label for="${prefix}-status" class="form-label">예약 상태</label><select class="form-select" id="${prefix}-status"></select></div>
-                    <div class="col-md-4"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
-                    <div class="col-md-4"><label for="${prefix}-total_cost" class="form-label">원가</label><input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}"></div>
+                    <div class="col-md-3"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
+                    <div class="col-md-3"><label for="${prefix}-total_cost" class="form-label">원가</label><input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}"></div>
+                    <div class="col-md-3"><label for="${prefix}-payment_amount" class="form-label">결제금액</label><input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}"></div>
+                    <div class="col-md-3"><label for="${prefix}-status" class="form-label">예약 상태</label><select class="form-select" id="${prefix}-status"></select></div>
 
                     <div class="col-12"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="col-12"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
@@ -360,6 +361,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 end_date: form.querySelector('#edit-reservation-end_date').value,
                 total_price: form.querySelector('#edit-reservation-total_price').value,
                 total_cost: form.querySelector('#edit-reservation-total_cost').value,
+                payment_amount: form.querySelector('#edit-reservation-payment_amount').value,
                 status: form.querySelector('#edit-reservation-status').value,
                 category: category,
                 requests: form.querySelector('#edit-reservation-requests').value,
@@ -441,6 +443,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     end_date: newReservationForm.querySelector('#new-reservation-end_date').value,
                     total_price: newReservationForm.querySelector('#new-reservation-total_price').value,
                     total_cost: newReservationForm.querySelector('#new-reservation-total_cost').value,
+                    payment_amount: newReservationForm.querySelector('#new-reservation-payment_amount').value,
                     status: newReservationForm.querySelector('#new-reservation-status').value,
                     category: category,
                     requests: newReservationForm.querySelector('#new-reservation-requests').value,

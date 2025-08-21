@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils import timezone # timezone import 추가
+from django.utils import timezone
 
 class Customer(models.Model):
     name = models.CharField("고객명", max_length=100)
@@ -22,7 +22,7 @@ class Partner(models.Model):
 class Reservation(models.Model):
     STATUS_CHOICES = [('PENDING', '상담중'), ('CONFIRMED', '예약확정'), ('PAID', '잔금완료'), ('COMPLETED', '여행완료'), ('CANCELED', '취소')]
     CATEGORY_CHOICES = [('TOUR', '투어'), ('RENTAL_CAR', '렌터카'), ('ACCOMMODATION', '숙박'), ('GOLF', '골프'), ('TICKET', '티켓'), ('OTHER', '기타')]
-    PAYMENT_STATUS_CHOICES = [ # 결제 현황 선택지 추가
+    PAYMENT_STATUS_CHOICES = [
         ('UNPAID', '미결제'),
         ('DEPOSIT', '예약금 입금'),
         ('PAID', '결제완료'),
@@ -32,26 +32,21 @@ class Reservation(models.Model):
     manager = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="담당자")
     tour_name = models.CharField("상품명", max_length=200)
     
-    # reservation_date 필드 수정
     reservation_date = models.DateField("예약일", default=timezone.now)
     
     total_price = models.DecimalField("판매가", max_digits=10, decimal_places=0, default=0)
     total_cost = models.DecimalField("원가", max_digits=10, decimal_places=0, default=0)
     
-    # payment_amount 필드 추가
+    # [수정] 결제금액 필드를 데이터베이스 모델에 추가합니다.
     payment_amount = models.DecimalField("결제금액", max_digits=10, decimal_places=0, default=0)
     
     status = models.CharField("예약 상태", max_length=10, choices=STATUS_CHOICES, default='PENDING')
-    
-    # payment_status 필드 추가
     payment_status = models.CharField("결제 현황", max_length=20, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
     
     start_date = models.DateField("시작일", null=True, blank=True)
     end_date = models.DateField("종료일", null=True, blank=True)
     notes = models.TextField("내부 메모", blank=True)
     requests = models.TextField("요청사항", blank=True)
-    
-    # special_notes 필드 추가 (특이사항)
     special_notes = models.TextField("특이사항", blank=True)
 
     category = models.CharField("카테고리", max_length=20, choices=CATEGORY_CHOICES, default='TOUR')
@@ -59,7 +54,6 @@ class Reservation(models.Model):
     def __str__(self): return f"[{self.get_category_display()}] {self.tour_name} - {self.customer.name if self.customer else '삭제된 고객'}"
 
 class Transaction(models.Model):
-    # ... (기존 Transaction 모델은 동일) ...
     TRANSACTION_TYPE_CHOICES = [('INCOME', '수입'), ('EXPENSE', '지출')]
     EXPENSE_ITEM_CHOICES = [('RENTAL_CAR', '렌터카'), ('ACCOMMODATION', '숙박'), ('GOLF', '골프'), ('CASH', '시제'), ('DEPOSIT', '예약금'), ('PURCHASE', '매입'), ('PARTNER', '제휴업체'), ('TICKET', '티켓'), ('GUIDE', '가이드'), ('MISC', '잡비'), ('OTHER', '기타')]
     PAYMENT_METHOD_CHOICES = [('CARD', '카드'), ('CASH', '현금'), ('TRANSFER', '계좌이체')]
