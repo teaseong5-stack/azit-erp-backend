@@ -133,11 +133,22 @@ def customer_detail(request, pk):
 def reservation_list(request):
     if request.method == 'GET':
         base_queryset = Reservation.objects.select_related('customer', 'manager')
+        
+        # 기본적으로는 로그인한 사용자의 데이터만 보도록 설정
+        queryset = base_queryset.filter(manager=request.user)
+        # 만약 관리자라면 모든 데이터를 보도록 변경
         if request.user.is_superuser:
             queryset = base_queryset.all()
-        else:
-            queryset = base_queryset.filter(manager=request.user)
         
+        # --- [수정된 부분] ---
+        # 리포트 페이지에서 보낸 '담당자' 필터를 처리하는 로직 추가
+        # 관리자만 이 필터를 사용할 수 있도록 함
+        if request.user.is_superuser:
+            manager_id = request.query_params.get('manager', None)
+            if manager_id:
+                queryset = queryset.filter(manager_id=manager_id)
+        # ---// [수정된 부분] ---
+
         category = request.query_params.get('category', None)
         search = request.query_params.get('search', None)
         start_date_gte = request.query_params.get('start_date__gte', None)
