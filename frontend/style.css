@@ -52,7 +52,6 @@ body {
     width: calc(100% - 280px);
 }
 
-/* --- 대시보드 통계 카드 스타일 --- */
 .stat-card {
     background-color: #ffffff;
     border: 1px solid #dee2e6;
@@ -89,7 +88,6 @@ body {
     color: #343a40;
 }
 
-/* --- 테이블 컨테이너 스타일 --- */
 .table-container {
     max-height: 800px;
     overflow-y: auto;
@@ -102,7 +100,6 @@ body {
     z-index: 1;
 }
 
-/* --- 관리자 메뉴 스타일 --- */
 #admin-menu {
     display: none;
 }
@@ -111,7 +108,6 @@ body.is-admin #admin-menu {
     display: flex;
 }
 
-/* --- 사이드바 하위 메뉴 스타일 --- */
 .nav-item.has-submenu {
     position: relative;
 }
@@ -139,7 +135,6 @@ body.is-admin #admin-menu {
     background-color: #495057;
 }
 
-/* --- 캘린더 디자인 개선 --- */
 .fc {
     border-radius: 0.75rem;
     border: 1px solid #dee2e6;
@@ -193,6 +188,7 @@ body.is-admin #admin-menu {
     font-weight: 500;
     border: none;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer; /* [수정] 마우스 커서를 손가락 모양으로 변경 */
 }
 
 .fc-event-title {
