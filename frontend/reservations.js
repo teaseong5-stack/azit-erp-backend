@@ -85,7 +85,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             deleteButton.onclick = async () => {
                 if (confirm(`[${res.tour_name}] 예약을 정말 삭제하시겠습니까?`)) {
                     await window.apiFetch(`reservations/${res.id}`, { method: 'DELETE' });
-                    // [수정] 페이지 전체 새로고침 대신, 목록만 새로고침합니다.
                     populateReservations(currentPage, currentFilters);
                 }
             };
@@ -377,7 +376,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
             if (response) {
                 modal.hide();
-                // [수정] 페이지 전체 새로고침 대신, 목록만 새로고침합니다.
                 populateReservations(currentPage, currentFilters);
             }
         };
@@ -459,12 +457,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                 });
 
                 if (response) {
-                    // [수정] 페이지 전체 새로고침 대신, 폼을 리셋하고 목록만 새로고침합니다.
                     newReservationForm.reset();
-                    // 카테고리를 기본값으로 되돌리고 상세 필드도 업데이트합니다.
                     newCategorySelect.value = 'TOUR';
                     handleCategoryChange('new-reservation');
-                    // 목록을 새로고침하여 새 데이터를 즉시 확인합니다.
                     populateReservations(1, {});
                 }
             });
