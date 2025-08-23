@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('reservation-list-table')) return;
 
-    // --- 1. 전역 변수 및 HTML 요소 선언 ---
     const user = await window.apiFetch('user-info');
     const reservationListTable = document.getElementById('reservation-list-table');
     const reservationFormContainer = document.getElementById('reservation-form');
@@ -23,8 +21,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
     let allCustomers = [];
-
-    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
 
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
@@ -63,9 +59,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${res.start_date || '미정'}</td>
                 <td>${res.category || 'N/A'}</td>
                 <td>${res.tour_name}</td>
-                <td>${Number(res.total_cost).toLocaleString()}원</td>
-                <td>${Number(res.total_price).toLocaleString()}원</td>
-                <td class="${balance > 0 ? 'text-danger' : 'text-success'} fw-bold">${Number(balance).toLocaleString()}원</td>
+                <td>${Number(res.total_cost).toLocaleString()} VND</td>
+                <td>${Number(res.total_price).toLocaleString()} VND</td>
+                <td class="${balance > 0 ? 'text-danger' : 'text-success'} fw-bold">${Number(balance).toLocaleString()} VND</td>
                 <td><span class="badge bg-primary">${res.status}</span></td>
                 <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>

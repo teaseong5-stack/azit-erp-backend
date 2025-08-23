@@ -1,12 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // accounting.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('transaction-list-table')) return;
 
-    // --- 1. HTML 요소 및 전역 변수 선언 ---
-    
-    // [수정] 사용자 정보를 DOM 로드 이후, 가장 먼저 가져오도록 위치를 변경합니다.
     const user = await window.apiFetch('user-info');
-
     const transactionListTable = document.getElementById('transaction-list-table');
     const transactionForm = document.getElementById('transaction-form');
     const reservationSelect = document.getElementById('trans-reservation');
@@ -14,32 +9,22 @@ document.addEventListener("DOMContentLoaded", async function() {
     const managerSelect = document.getElementById('trans-manager');
     const transTypeSelect = document.getElementById('trans-type');
     const expenseItemWrapper = document.getElementById('expense-item-wrapper');
-    
-    // 현황판 요소
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpenseEl = document.getElementById('total-expense');
     const balanceEl = document.getElementById('balance');
-
-    // 현황판 필터 요소
     const summaryYearSelect = document.getElementById('summary-year-select');
     const summaryMonthSelect = document.getElementById('summary-month-select');
     const summaryFilterButton = document.getElementById('summary-filter-button');
     const summaryResetButton = document.getElementById('summary-reset-button');
-
-    // 목록 필터 요소
     const filterSearchInput = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     const filterResetButton = document.getElementById('filter-reset-button');
-
-    // 수정 모달 요소
     const editModal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
     const editModalSaveButton = document.getElementById('edit-transaction-save-button');
     const editReservationSelect = document.getElementById('edit-trans-reservation');
     const editPartnerSelect = document.getElementById('edit-trans-partner');
-
-    // 페이지네이션 관련 요소 및 상태 변수
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
@@ -47,9 +32,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
 
-    // --- 2. 데이터 로딩 및 화면 구성 함수 ---
-
-    // 현황판 카드 데이터를 업데이트하는 함수
     async function updateSummaryCards(year = null, month = null) {
         let endpoint = 'transactions/summary';
         if (year && month) {
@@ -59,13 +41,12 @@ document.addEventListener("DOMContentLoaded", async function() {
         
         const summary = await window.apiFetch(endpoint);
         if (summary) {
-            totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()}원`;
-            totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()}원`;
-            balanceEl.textContent = `${Number(summary.balance).toLocaleString()}원`;
+            totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
+            totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
+            balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
         }
     }
 
-    // 년/월 드롭다운 메뉴를 채우는 함수
     function populateYearMonthDropdowns() {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
@@ -89,7 +70,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         summaryMonthSelect.value = currentMonth;
     }
 
-    // 새 거래 등록 폼의 드롭다운 메뉴를 채우는 함수
     async function populateSelectOptions() {
         const [reservationsResponse, partners] = await Promise.all([
             window.apiFetch('reservations?page_size=10000'),
@@ -127,7 +107,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // 거래 내역 목록을 업데이트하는 함수
     async function populateTransactions(page = 1, filters = {}) {
         currentFilters = filters;
         let params = new URLSearchParams({ page, ...filters });
@@ -156,7 +135,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${trans.transaction_date}</td>
                 <td><span class="badge bg-${amountClass.includes('primary') ? 'primary' : 'danger'}">${trans.transaction_type}</span></td>
                 <td>${trans.description}</td>
-                <td class="${amountClass} fw-bold">${Number(trans.amount).toLocaleString()}원</td>
+                <td class="${amountClass} fw-bold">${Number(trans.amount).toLocaleString()} VND</td>
                 <td>${relatedItem}</td>
                 <td>${trans.manager ? trans.manager.username : ''}</td>
                 <td></td>
@@ -167,7 +146,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 buttonGroup.className = 'btn-group';
                 const editButton = document.createElement('button');
                 editButton.textContent = '수정';
-                editButton.className = 'btn btn-primary btn-sm';
+                editButton.className = 'btn btn-sm btn-primary';
                 editButton.onclick = () => {
                     document.getElementById('edit-trans-date').value = trans.transaction_date;
                     document.getElementById('edit-trans-type').value = trans.transaction_type;
@@ -195,7 +174,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 };
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '삭제';
-                deleteButton.className = 'btn btn-danger btn-sm';
+                deleteButton.className = 'btn btn-sm btn-danger';
                 deleteButton.onclick = async () => {
                     if (confirm(`'${trans.description}' 거래 내역을 정말 삭제하시겠습니까?`)) {
                         await window.apiFetch(`transactions/${trans.id}`, { method: 'DELETE' });
@@ -215,9 +194,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         nextPageButton.disabled = !response.next;
     }
 
-    // --- 3. 이벤트 리스너 설정 ---
-
-    // 새 거래 등록 폼 제출 이벤트
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -236,15 +212,13 @@ document.addEventListener("DOMContentLoaded", async function() {
         transactionForm.reset();
         expenseItemWrapper.style.display = 'none';
         populateTransactions(1, currentFilters);
-        updateSummaryCards(); // 새 거래 등록 후 전체 현황판도 갱신
+        updateSummaryCards();
     });
     
-    // 거래 종류(수입/지출) 변경 시 이벤트
     transTypeSelect.addEventListener('change', () => {
         expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
     });
 
-    // 목록 필터 적용 함수
     function applyFilters() {
         const filters = {};
         if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
@@ -263,7 +237,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         populateTransactions(1, {});
     });
 
-    // 현황판 필터 버튼 이벤트
     summaryFilterButton.addEventListener('click', () => {
         const selectedYear = summaryYearSelect.value;
         const selectedMonth = summaryMonthSelect.value;
@@ -274,7 +247,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         updateSummaryCards();
     });
 
-    // 페이지네이션 버튼 이벤트
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) {
             populateTransactions(currentPage - 1, currentFilters);
@@ -287,7 +259,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     });
 
-    // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
         populateYearMonthDropdowns();
         await updateSummaryCards();

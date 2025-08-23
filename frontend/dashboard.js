@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // dashboard.html 페이지에 있을 때만 이 코드를 실행합니다.
     if (!document.getElementById('calendar')) return;
 
     const calendarEl = document.getElementById('calendar');
@@ -108,9 +107,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     detailsHtml += categoryDetails;
                     detailsHtml += `
                         <div class="row">
-                            <div class="col-md-4"><p><strong>판매가:</strong> ${Number(res.total_price).toLocaleString()}원</p></div>
-                            <div class="col-md-4"><p><strong>원가:</strong> ${Number(res.total_cost).toLocaleString()}원</p></div>
-                            <div class="col-md-4"><p><strong>결제 금액:</strong> ${Number(res.payment_amount).toLocaleString()}원</p></div>
+                            <div class="col-md-4"><p><strong>판매가:</strong> ${Number(res.total_price).toLocaleString()} VND</p></div>
+                            <div class="col-md-4"><p><strong>원가:</strong> ${Number(res.total_cost).toLocaleString()} VND</p></div>
+                            <div class="col-md-4"><p><strong>결제 금액:</strong> ${Number(res.payment_amount).toLocaleString()} VND</p></div>
                         </div>
                         <hr>
                         <h6>요청사항</h6>
@@ -138,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
         for (const category in categorySales) {
-            const cardHtml = `<div class="col-md-4 col-lg-2 mb-3"><div class="card text-white" style="background-color: ${categoryColors[category] || '#6c757d'}"><div class="card-body"><h6 class="card-title">${categoryLabels[category] || category}</h6><p class="card-text fs-5">${categorySales[category].toLocaleString()}원</p></div></div></div>`;
+            const cardHtml = `<div class="col-md-4 col-lg-2 mb-3"><div class="card text-white" style="background-color: ${categoryColors[category] || '#6c757d'}"><div class="card-body"><h6 class="card-title">${categoryLabels[category] || category}</h6><p class="card-text fs-5">${categorySales[category].toLocaleString()} VND</p></div></div></div>`;
             categorySalesCards.innerHTML += cardHtml;
         }
     }
