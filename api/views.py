@@ -1,6 +1,6 @@
 import csv
 from django.http import HttpResponse
-from django.db.models import Q, F, Sum, Value, DecimalField
+from django.db.models import Q, F, Sum, Value, DecimalField, Count
 from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 from rest_framework import status
@@ -126,6 +126,60 @@ def customer_detail(request, pk):
     elif request.method == 'DELETE':
         customer.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# [새로 추가된 뷰]
+# 필터 조건에 맞는 예약 데이터의 요약 정보를 계산하는 API
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reservation_summary(request):
+    base_queryset = Reservation.objects.select_related('manager')
+
+    if request.user.is_superuser:
+        queryset = base_queryset.all()
+    else:
+        queryset = base_queryset.filter(manager=request.user)
+    
+    if request.user.is_superuser:
+        manager_id = request.query_params.get('manager', None)
+        if manager_id:
+            queryset = queryset.filter(manager_id=manager_id)
+
+    category = request.query_params.get('category', None)
+    search = request.query_params.get('search', None)
+    start_date_gte = request.query_params.get('start_date__gte', None)
+    start_date_lte = request.query_params.get('start_date__lte', None)
+
+    if category:
+        queryset = queryset.filter(category=category)
+    if search:
+        queryset = queryset.filter(
+            Q(tour_name__icontains=search) | Q(customer__name__icontains=search)
+        )
+    if start_date_gte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
+    if start_date_lte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
+
+    # 합계 계산
+    totals = queryset.aggregate(
+        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
+        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
+    )
+    totals['total_margin'] = totals['total_sales'] - totals['total_cost']
+
+    # 담당자별 건수 계산
+    manager_counts = list(
+        queryset.values('manager__username')
+                 .annotate(count=Count('id'))
+                 .order_by('-count')
+    )
+
+    summary_data = {
+        "totals": totals,
+        "manager_counts": manager_counts
+    }
+    
+    return Response(summary_data)
 
 # --- Reservation 관련 뷰 ---
 @api_view(['GET', 'POST'])

@@ -12,8 +12,9 @@ urlpatterns = [
     path('customers/<int:pk>/', views.customer_detail),
     path('customers/bulk/', views.customer_bulk_import),
 
-    # Reservation URLs
+     # Reservation URLs
     path('reservations/', views.reservation_list),
+    path('reservations/summary/', views.reservation_summary), # [추가]
     path('reservations/bulk/', views.reservation_bulk_import),
     path('reservations/<int:pk>/', views.reservation_detail),
 

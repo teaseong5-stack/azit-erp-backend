@@ -36,7 +36,7 @@
             <button id="logout-button" class="btn btn-outline-danger">로그아웃</button>
         </div>
 
-        <!-- [수정] 상세 검색 필터 섹션 -->
+        <!-- 상세 검색 필터 섹션 -->
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">상세 검색</h5>
@@ -76,7 +76,15 @@
             </div>
         </div>
 
-        <!-- [수정] 전체 예약 내역 테이블 -->
+        <!-- 요약 정보 카드 섹션 -->
+        <div class="row mb-4">
+            <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h6 class="card-title">총 판매가</h6><p class="card-text fs-4" id="summary-total-sales">0 VND</p></div></div></div>
+            <div class="col-md-3"><div class="card text-white bg-info"><div class="card-body"><h6 class="card-title">총 원가</h6><p class="card-text fs-4" id="summary-total-cost">0 VND</p></div></div></div>
+            <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h6 class="card-title">총 마진</h6><p class="card-text fs-4" id="summary-total-margin">0 VND</p></div></div></div>
+            <div class="col-md-3"><div class="card"><div class="card-body"><h6 class="card-title">담당자별 예약 건수</h6><div id="summary-manager-counts" style="max-height: 80px; overflow-y: auto;"></div></div></div></div>
+        </div>
+
+        <!-- 전체 예약 내역 테이블 -->
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">전체 예약 내역</h5>
@@ -97,13 +105,8 @@
                     </table>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                        <span id="page-info"></span>
-                    </div>
-                    <div>
-                        <button id="prev-page-button" class="btn btn-outline-secondary">이전</button>
-                        <button id="next-page-button" class="btn btn-outline-secondary">다음</button>
-                    </div>
+                    <div><span id="page-info"></span></div>
+                    <div><button id="prev-page-button" class="btn btn-outline-secondary">이전</button><button id="next-page-button" class="btn btn-outline-secondary">다음</button></div>
                 </div>
             </div>
         </div>
