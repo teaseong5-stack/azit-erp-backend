@@ -8,14 +8,23 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 사이드바 메뉴 -->
-    <nav class="sidebar">
+     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
         <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a></li>
-            <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
+            <!-- [수정] 대시보드 메뉴를 하위 메뉴를 가진 형태로 변경 -->
             <li class="nav-item has-submenu">
-                <a class="nav-link active" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
+                <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="calendar_view.html">캘린더 현황</a></li>
+                    <li><a class="nav-link" href="monthly_sales.html">월별 매출 현황</a></li>
+                    <li><a class="nav-link" href="category_sales.html">카테고리별 현황</a></li>
+                    <li><a class="nav-link" href="manager_sales.html">담당자별 현황</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item"><a class="nav-link active" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
                 <ul class="submenu">
                     <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
                 </ul>

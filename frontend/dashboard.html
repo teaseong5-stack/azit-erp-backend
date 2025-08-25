@@ -10,27 +10,33 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- 사이드바 메뉴 -->
-    <nav class="sidebar">
-        <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill"></i>아지트 ERP</h3></div>
+     <nav class="sidebar">
+        <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
         <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link active" href="dashboard.html"><i class="bi bi-grid-fill"></i>대시보드</a></li>
-            <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill"></i>고객 관리</a></li>
+            <!-- [수정] 대시보드 메뉴를 하위 메뉴를 가진 형태로 변경 -->
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="calendar_view.html">캘린더 현황</a></li>
+                    <li><a class="nav-link" href="monthly_sales.html">월별 매출 현황</a></li>
+                    <li><a class="nav-link" href="category_sales.html">카테고리별 현황</a></li>
+                    <li><a class="nav-link" href="manager_sales.html">담당자별 현황</a></li>
+                </ul>
+            </li>
             
-            <!-- 예약 관리 메뉴와 하위 메뉴 구조 -->
+            <li class="nav-item"><a class="nav-link active" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
             <li class="nav-item has-submenu">
                 <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
                 <ul class="submenu">
                     <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
                 </ul>
             </li>
-            
-            <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill"></i>리포트</a></li>
-            <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building"></i>제휴업체 관리</a></li>
-            <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill"></i>회계 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a></li>
+            <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building me-2"></i>제휴업체 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
         </ul>
         <ul id="admin-menu" class="nav flex-column mt-auto">
-            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill"></i>설정</a></li>
+            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill me-2"></i>설정</a></li>
         </ul>
     </nav>
 
