@@ -331,6 +331,23 @@ def partner_detail(request, pk):
         partner.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+# [새로 추가된 뷰]
+# 대시보드와 리포트에서 사용할, 페이지가 나뉘지 않은 '전체' 예약 목록을 반환하는 API
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reservation_list_all(request):
+    base_queryset = Reservation.objects.select_related('customer', 'manager')
+
+    if request.user.is_superuser:
+        queryset = base_queryset.all()
+    else:
+        queryset = base_queryset.filter(manager=request.user)
+    
+    serializer = ReservationSerializer(queryset.order_by(F('start_date').desc(nulls_last=True)), many=True)
+    
+    # 프론트엔드가 데이터를 처리할 수 있도록 'results' 키에 담아서 반환
+    return Response({'results': serializer.data})
+
 # --- Transaction 관련 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
