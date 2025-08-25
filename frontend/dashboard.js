@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // dashboard.html 페이지에 있을 때만 이 코드를 실행합니다.
     if (!document.getElementById('calendar')) return;
 
     const calendarEl = document.getElementById('calendar');
@@ -212,6 +213,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     
+    // [수정] 페이지네이션을 사용하지 않고 모든 데이터를 가져오도록 API를 호출합니다.
     window.apiFetch('reservations?page_size=10000').then(response => {
         if(response && response.results) {
             const reservations = response.results;
