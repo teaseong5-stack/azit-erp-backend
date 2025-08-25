@@ -349,6 +349,7 @@ def reservation_list_all(request):
     return Response({'results': serializer.data})
 
 # --- Transaction 관련 뷰 ---
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
@@ -356,15 +357,32 @@ def transaction_summary(request):
         queryset = Transaction.objects.all()
     else:
         queryset = Transaction.objects.filter(manager=request.user)
+
     year = request.query_params.get('year')
     month = request.query_params.get('month')
+
     if year and month:
         queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
+
+    # [수정] 기존 합계에 더해, 결제 수단별 합계를 계산하는 로직을 추가합니다.
     summary = queryset.aggregate(
+        # 전체 합계
         total_income=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME')), Value(0), output_field=DecimalField()),
-        total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField())
+        total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField()),
+        
+        # 수입 상세
+        income_card=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='CARD')), Value(0), output_field=DecimalField()),
+        income_cash=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='CASH')), Value(0), output_field=DecimalField()),
+        income_transfer=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='TRANSFER')), Value(0), output_field=DecimalField()),
+
+        # 지출 상세
+        expense_card=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='CARD')), Value(0), output_field=DecimalField()),
+        expense_cash=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='CASH')), Value(0), output_field=DecimalField()),
+        expense_transfer=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='TRANSFER')), Value(0), output_field=DecimalField())
     )
+    
     summary['balance'] = summary['total_income'] - summary['total_expense']
+    
     return Response(summary)
 
 @api_view(['GET', 'POST'])

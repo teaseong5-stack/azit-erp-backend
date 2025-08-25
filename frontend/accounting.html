@@ -8,20 +8,33 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 사이드바 메뉴 -->
-    <nav class="sidebar">
+     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
         <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a></li>
-            <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
-            <li class="nav-item"><a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a></li>
-            <li class="nav-item"><a class="nav-link" href="bulk_upload.html"><i class="bi bi-upload"></i> 일괄 등록</a></li>
+            <!-- [수정] 대시보드 메뉴를 하위 메뉴를 가진 형태로 변경 -->
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="calendar_view.html">캘린더 현황</a></li>
+                    <li><a class="nav-link" href="monthly_sales.html">월별 매출 현황</a></li>
+                    <li><a class="nav-link" href="category_sales.html">카테고리별 현황</a></li>
+                    <li><a class="nav-link" href="manager_sales.html">담당자별 현황</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item"><a class="nav-link active" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
+                </ul>
+            </li>
             <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a></li>
             <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building me-2"></i>제휴업체 관리</a></li>
-            <li class="nav-item"><a class="nav-link active" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
         </ul>
         <ul id="admin-menu" class="nav flex-column mt-auto">
-            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill"></i>설정</a></li>
+            <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill me-2"></i>설정</a></li>
         </ul>
     </nav>
 
@@ -53,11 +66,44 @@
             </div>
         </div>
 
-        <!-- 회계 현황판 -->
+        <!-- [수정] 회계 현황판 구조 변경 -->
         <div class="row text-center mb-4">
-            <div class="col-md-4"><div class="card text-white bg-primary"><div class="card-body"><h5 class="card-title">총 수입</h5><p class="card-text fs-4" id="total-income">0원</p></div></div></div>
-            <div class="col-md-4"><div class="card text-white bg-danger"><div class="card-body"><h5 class="card-title">총 지출</h5><p class="card-text fs-4" id="total-expense">0원</p></div></div></div>
-            <div class="col-md-4"><div class="card text-white bg-success"><div class="card-body"><h5 class="card-title">잔액</h5><p class="card-text fs-4" id="balance">0원</p></div></div></div>
+            <div class="col-md-4">
+                <div class="card text-white bg-primary h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">총 수입</h5>
+                        <p class="card-text fs-4" id="total-income">0 VND</p>
+                        <hr>
+                        <div class="d-flex justify-content-around small">
+                            <span><i class="bi bi-credit-card-fill"></i> 카드: <span id="income-card">0</span></span>
+                            <span><i class="bi bi-cash"></i> 현금: <span id="income-cash">0</span></span>
+                            <span><i class="bi bi-bank"></i> 이체: <span id="income-transfer">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-danger h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">총 지출</h5>
+                        <p class="card-text fs-4" id="total-expense">0 VND</p>
+                        <hr>
+                        <div class="d-flex justify-content-around small">
+                            <span><i class="bi bi-credit-card-fill"></i> 카드: <span id="expense-card">0</span></span>
+                            <span><i class="bi bi-cash"></i> 현금: <span id="expense-cash">0</span></span>
+                            <span><i class="bi bi-bank"></i> 이체: <span id="expense-transfer">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success h-100">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h5 class="card-title">잔액</h5>
+                        <p class="card-text fs-4" id="balance">0 VND</p>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="card mb-4">

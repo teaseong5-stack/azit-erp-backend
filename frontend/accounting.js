@@ -12,6 +12,12 @@ document.addEventListener("DOMContentLoaded", async function() {
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpenseEl = document.getElementById('total-expense');
     const balanceEl = document.getElementById('balance');
+	const incomeCardEl = document.getElementById('income-card');
+    const incomeCashEl = document.getElementById('income-cash');
+    const incomeTransferEl = document.getElementById('income-transfer');
+    const expenseCardEl = document.getElementById('expense-card');
+    const expenseCashEl = document.getElementById('expense-cash');
+    const expenseTransferEl = document.getElementById('expense-transfer');
     const summaryYearSelect = document.getElementById('summary-year-select');
     const summaryMonthSelect = document.getElementById('summary-month-select');
     const summaryFilterButton = document.getElementById('summary-filter-button');
@@ -32,6 +38,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
 
+    // [수정] 현황판 카드 데이터를 업데이트하는 함수
     async function updateSummaryCards(year = null, month = null) {
         let endpoint = 'transactions/summary';
         if (year && month) {
@@ -41,9 +48,18 @@ document.addEventListener("DOMContentLoaded", async function() {
         
         const summary = await window.apiFetch(endpoint);
         if (summary) {
+            // 전체 합계 업데이트
             totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
             totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
             balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
+
+            // 상세 내역 업데이트
+            incomeCardEl.textContent = `${Number(summary.income_card).toLocaleString()}`;
+            incomeCashEl.textContent = `${Number(summary.income_cash).toLocaleString()}`;
+            incomeTransferEl.textContent = `${Number(summary.income_transfer).toLocaleString()}`;
+            expenseCardEl.textContent = `${Number(summary.expense_card).toLocaleString()}`;
+            expenseCashEl.textContent = `${Number(summary.expense_cash).toLocaleString()}`;
+            expenseTransferEl.textContent = `${Number(summary.expense_transfer).toLocaleString()}`;
         }
     }
 
