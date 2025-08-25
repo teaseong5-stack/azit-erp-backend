@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         const rows = rawData.split('\n').slice(1);
         const reservations = [];
-        resultLog.textContent = '데이터 변환 중...';
+        resultLog.textContent = '데이터 변환 및 고객 정보 확인 중...';
 
         for (const row of rows) {
             const columns = row.split('\t');
@@ -43,10 +43,34 @@ document.addEventListener("DOMContentLoaded", async function() {
             const customerName = columns[1].trim();
             const managerName = columns[10].trim();
             
-            const customer = allCustomers.find(c => c.name === customerName);
+            // [수정] 고객 자동 생성 로직 추가
+            let customer = allCustomers.find(c => c.name === customerName);
+
+            // 만약 고객이 존재하지 않으면, 새로 생성합니다.
+            if (!customer && customerName) {
+                resultLog.textContent += `\n'${customerName}' 고객 정보가 없어 새로 등록합니다...`;
+                const newCustomerData = { 
+                    name: customerName, 
+                    phone_number: '정보 없음' // 기본값 설정
+                };
+                
+                const newCustomer = await window.apiFetch('customers', {
+                    method: 'POST',
+                    body: JSON.stringify(newCustomerData)
+                });
+
+                if (newCustomer) {
+                    allCustomers.push(newCustomer); // 다음 검색을 위해 로컬 목록에 추가
+                    customer = newCustomer;
+                    resultLog.textContent += `\n'${customerName}' 고객 등록 완료 (ID: ${customer.id}).`;
+                } else {
+                    resultLog.textContent += `\n[오류] '${customerName}' 고객 생성 실패. 이 예약은 건너뜁니다.`;
+                    continue; // 고객 생성 실패 시 해당 예약 건너뛰기
+                }
+            }
+            
             const manager = allUsers.find(u => u.username === managerName);
 
-            // [수정] .replace(/,/g, '')를 추가하여 쉼표를 제거한 후 숫자로 변환합니다.
             const totalPrice = parseFloat((columns[7] || '0').replace(/,/g, '')) || 0;
             const balance = parseFloat((columns[8] || '0').replace(/,/g, '')) || 0;
             const totalCost = parseFloat((columns[6] || '0').replace(/,/g, '')) || 0;
@@ -68,7 +92,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 notes: `일괄 등록된 데이터 (원본 고객명: ${customerName}, 원본 담당자명: ${managerName})`
             };
             
-            if (!customer) reservation.notes += ` [경고: 고객 '${customerName}'을 찾을 수 없음]`;
             if (!manager) reservation.notes += ` [경고: 담당자 '${managerName}'를 찾을 수 없음]`;
             
             reservations.push(reservation);
@@ -79,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             return;
         }
 
-        resultLog.textContent = `${reservations.length}개의 데이터를 서버로 전송합니다...`;
+        resultLog.textContent += `\n\n${reservations.length}개의 데이터를 서버로 전송합니다...`;
 
         try {
             const response = await window.apiFetch('reservations/bulk/', {
