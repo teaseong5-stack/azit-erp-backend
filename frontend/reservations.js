@@ -353,15 +353,17 @@ document.addEventListener("DOMContentLoaded", async function() {
         modalSaveButton.onclick = async () => {
             const form = document.getElementById('edit-reservation-form');
             const category = form.querySelector('#edit-reservation-category').value;
+            
+            // [수정] .value 뒤에 .replace(/,/g, '')를 추가하여 쉼표를 제거합니다.
             const formData = {
                 tour_name: form.querySelector('#edit-reservation-tour_name').value,
                 customer_id: form.querySelector('#edit-reservation-customer_id').value,
                 reservation_date: form.querySelector('#edit-reservation-reservation_date').value,
                 start_date: form.querySelector('#edit-reservation-start_date').value,
                 end_date: form.querySelector('#edit-reservation-end_date').value,
-                total_price: form.querySelector('#edit-reservation-total_price').value,
-                total_cost: form.querySelector('#edit-reservation-total_cost').value,
-                payment_amount: form.querySelector('#edit-reservation-payment_amount').value,
+                total_price: form.querySelector('#edit-reservation-total_price').value.replace(/,/g, ''),
+                total_cost: form.querySelector('#edit-reservation-total_cost').value.replace(/,/g, ''),
+                payment_amount: form.querySelector('#edit-reservation-payment_amount').value.replace(/,/g, ''),
                 status: form.querySelector('#edit-reservation-status').value,
                 category: category,
                 requests: form.querySelector('#edit-reservation-requests').value,
@@ -435,15 +437,17 @@ document.addEventListener("DOMContentLoaded", async function() {
             newReservationForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const category = newReservationForm.querySelector('#new-reservation-category').value;
+                
+                // [수정] .value 뒤에 .replace(/,/g, '')를 추가하여 쉼표를 제거합니다.
                 const formData = {
                     tour_name: newReservationForm.querySelector('#new-reservation-tour_name').value,
                     customer_id: newReservationForm.querySelector('#new-reservation-customer_id').value,
                     reservation_date: newReservationForm.querySelector('#new-reservation-reservation_date').value,
                     start_date: newReservationForm.querySelector('#new-reservation-start_date').value,
                     end_date: newReservationForm.querySelector('#new-reservation-end_date').value,
-                    total_price: newReservationForm.querySelector('#new-reservation-total_price').value,
-                    total_cost: newReservationForm.querySelector('#new-reservation-total_cost').value,
-                    payment_amount: newReservationForm.querySelector('#new-reservation-payment_amount').value,
+                    total_price: newReservationForm.querySelector('#new-reservation-total_price').value.replace(/,/g, ''),
+                    total_cost: newReservationForm.querySelector('#new-reservation-total_cost').value.replace(/,/g, ''),
+                    payment_amount: newReservationForm.querySelector('#new-reservation-payment_amount').value.replace(/,/g, ''),
                     status: newReservationForm.querySelector('#new-reservation-status').value,
                     category: category,
                     requests: newReservationForm.querySelector('#new-reservation-requests').value,
