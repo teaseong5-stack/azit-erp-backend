@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpenseEl = document.getElementById('total-expense');
     const balanceEl = document.getElementById('balance');
-	const incomeCardEl = document.getElementById('income-card');
+    const incomeCardEl = document.getElementById('income-card');
     const incomeCashEl = document.getElementById('income-cash');
     const incomeTransferEl = document.getElementById('income-transfer');
     const expenseCardEl = document.getElementById('expense-card');
@@ -38,22 +38,17 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
 
-    // [수정] 현황판 카드 데이터를 업데이트하는 함수
     async function updateSummaryCards(year = null, month = null) {
         let endpoint = 'transactions/summary';
         if (year && month) {
             const params = new URLSearchParams({ year, month });
             endpoint += `?${params.toString()}`;
         }
-        
         const summary = await window.apiFetch(endpoint);
         if (summary) {
-            // 전체 합계 업데이트
             totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
             totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
             balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
-
-            // 상세 내역 업데이트
             incomeCardEl.textContent = `${Number(summary.income_card).toLocaleString()}`;
             incomeCashEl.textContent = `${Number(summary.income_cash).toLocaleString()}`;
             incomeTransferEl.textContent = `${Number(summary.income_transfer).toLocaleString()}`;
@@ -66,7 +61,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     function populateYearMonthDropdowns() {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
-
         for (let i = 0; i < 5; i++) {
             const year = currentYear - i;
             const option = document.createElement('option');
@@ -74,14 +68,12 @@ document.addEventListener("DOMContentLoaded", async function() {
             option.textContent = `${year}년`;
             summaryYearSelect.appendChild(option);
         }
-
         for (let i = 1; i <= 12; i++) {
             const option = document.createElement('option');
             option.value = i;
             option.textContent = `${i}월`;
             summaryMonthSelect.appendChild(option);
         }
-        
         summaryYearSelect.value = currentYear;
         summaryMonthSelect.value = currentMonth;
     }
@@ -91,7 +83,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             window.apiFetch('reservations?page_size=10000'),
             window.apiFetch('partners'),
         ]);
-
         const resOptions = ['<option value="">-- 예약 선택 --</option>'];
         if (reservationsResponse && reservationsResponse.results) {
             reservationsResponse.results.forEach(res => {
@@ -101,14 +92,12 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
         reservationSelect.innerHTML = resOptions.join('');
         editReservationSelect.innerHTML = resOptions.join('');
-
         const partnerOptions = ['<option value="">-- 제휴업체 선택 --</option>'];
         if (partners) {
             partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
         }
         partnerSelect.innerHTML = partnerOptions.join('');
         editPartnerSelect.innerHTML = partnerOptions.join('');
-        
         if (user && user.is_superuser) {
             const users = await window.apiFetch('users');
             if (users) {
@@ -127,26 +116,21 @@ document.addEventListener("DOMContentLoaded", async function() {
         currentFilters = filters;
         let params = new URLSearchParams({ page, ...filters });
         const queryString = params.toString();
-        
         const response = await window.apiFetch(`transactions?${queryString}`);
         transactionListTable.innerHTML = '';
-
         if (!response || !response.results) {
             pageInfo.textContent = '데이터가 없습니다.';
             prevPageButton.disabled = true;
             nextPageButton.disabled = true;
             return;
         }
-        
         const transactions = response.results;
         const totalCount = response.count;
         totalPages = Math.ceil(totalCount / 50);
-
         transactions.forEach(trans => {
             const row = document.createElement('tr');
             const amountClass = trans.transaction_type === 'INCOME' ? 'text-primary' : 'text-danger';
             const relatedItem = trans.reservation ? `예약: ${trans.reservation.tour_name}` : (trans.partner ? `업체: ${trans.partner.name}` : '');
-
             row.innerHTML = `
                 <td>${trans.transaction_date}</td>
                 <td><span class="badge bg-${amountClass.includes('primary') ? 'primary' : 'danger'}">${trans.transaction_type}</span></td>
@@ -156,13 +140,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${trans.manager ? trans.manager.username : ''}</td>
                 <td></td>
             `;
-
             if (user && user.is_superuser) {
                 const buttonGroup = document.createElement('div');
                 buttonGroup.className = 'btn-group';
                 const editButton = document.createElement('button');
                 editButton.textContent = '수정';
-                editButton.className = 'btn btn-sm btn-primary';
+                editButton.className = 'btn btn-primary btn-sm';
                 editButton.onclick = () => {
                     document.getElementById('edit-trans-date').value = trans.transaction_date;
                     document.getElementById('edit-trans-type').value = trans.transaction_type;
@@ -171,7 +154,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     editReservationSelect.value = trans.reservation ? trans.reservation.id : '';
                     editPartnerSelect.value = trans.partner ? trans.partner.id : '';
                     document.getElementById('edit-trans-notes').value = trans.notes || '';
-
                     editModalSaveButton.onclick = async () => {
                         const updatedData = {
                             transaction_date: document.getElementById('edit-trans-date').value,
@@ -190,7 +172,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 };
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '삭제';
-                deleteButton.className = 'btn btn-sm btn-danger';
+                deleteButton.className = 'btn btn-danger btn-sm';
                 deleteButton.onclick = async () => {
                     if (confirm(`'${trans.description}' 거래 내역을 정말 삭제하시겠습니까?`)) {
                         await window.apiFetch(`transactions/${trans.id}`, { method: 'DELETE' });
@@ -203,11 +185,18 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
             transactionListTable.appendChild(row);
         });
-
         currentPage = page;
         pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
         prevPageButton.disabled = !response.previous;
         nextPageButton.disabled = !response.next;
+    }
+
+    function applyFilters() {
+        const filters = {};
+        if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
+        if (filterStartDate.value) filters.date_after = filterStartDate.value;
+        if (filterEndDate.value) filters.date_before = filterEndDate.value;
+        populateTransactions(1, filters);
     }
 
     transactionForm.addEventListener('submit', async function(event) {
@@ -234,45 +223,27 @@ document.addEventListener("DOMContentLoaded", async function() {
     transTypeSelect.addEventListener('change', () => {
         expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
     });
-
-    function applyFilters() {
-        const filters = {};
-        if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
-        if (filterStartDate.value) filters.date_after = filterStartDate.value;
-        if (filterEndDate.value) filters.date_before = filterEndDate.value;
-        populateTransactions(1, filters);
-    }
-
     filterButton.addEventListener('click', applyFilters);
     filterSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
-
     filterResetButton.addEventListener('click', () => {
         filterSearchInput.value = '';
         filterStartDate.value = '';
         filterEndDate.value = '';
         populateTransactions(1, {});
     });
-
     summaryFilterButton.addEventListener('click', () => {
         const selectedYear = summaryYearSelect.value;
         const selectedMonth = summaryMonthSelect.value;
         updateSummaryCards(selectedYear, selectedMonth);
     });
-
     summaryResetButton.addEventListener('click', () => {
         updateSummaryCards();
     });
-
     prevPageButton.addEventListener('click', () => {
-        if (currentPage > 1) {
-            populateTransactions(currentPage - 1, currentFilters);
-        }
+        if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters);
     });
-
     nextPageButton.addEventListener('click', () => {
-        if (currentPage < totalPages) {
-            populateTransactions(currentPage + 1, currentFilters);
-        }
+        if (currentPage < totalPages) populateTransactions(currentPage + 1, currentFilters);
     });
 
     async function initializePage() {
