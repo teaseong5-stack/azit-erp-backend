@@ -241,7 +241,7 @@ def reservation_summary(request):
     summary_data = {"totals": totals, "manager_counts": manager_counts}
     return Response(summary_data)
 
-@api_view(['GET', 'POST'])
+api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
@@ -283,7 +283,7 @@ def reservation_list(request):
                 serializer.save(manager=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        
 # [수정된 뷰]
 # 예약 일괄 등록 시, 중복 데이터는 덮어쓰도록 로직을 수정합니다.
 @api_view(['POST'])
@@ -308,45 +308,51 @@ def reservation_bulk_import(request):
         if not manager:
             manager = request.user
 
-        # 중복 확인을 위한 핵심 필드 추출
         customer_id = item.get('customer_id')
         reservation_date = item.get('reservation_date')
         start_date = item.get('start_date')
         category = item.get('category')
-        tour_name = item.get('tour_name')
+        tour_name = item.get('tour_name')        
 
-        # 핵심 필드가 하나라도 없으면 오류로 처리
-        if not all([customer_id, reservation_date, start_date, category, tour_name]):
-            errors.append({"data": item, "errors": "필수 식별 필드(고객, 예약일, 시작일, 카테고리, 상품명)가 누락되었습니다."})
-            continue
+# [수정] 5가지 핵심 필드가 모두 존재할 경우에만 덮어쓰기를 시도하고,
+        # 하나라도 비어있으면 무조건 새로 생성하도록 로직을 변경합니다.
+        should_update = all([customer_id, reservation_date, start_date, category, tour_name])
 
         try:
-            # 핵심 필드로 기존 예약을 찾고, 있으면 덮어쓰기(update), 없으면 새로 생성(create)
-            reservation, created = Reservation.objects.update_or_create(
-                customer_id=customer_id,
-                reservation_date=reservation_date,
-                start_date=start_date,
-                category=category,
-                tour_name=tour_name,
-                defaults={
-                    'total_cost': item.get('total_cost', 0),
-                    'total_price': item.get('total_price', 0),
-                    'payment_amount': item.get('payment_amount', 0),
-                    'status': item.get('status', 'PENDING'),
-                    'manager': manager,
-                    'details': item.get('details', {}),
-                    'requests': item.get('requests', ''),
-                    'notes': item.get('notes', '')
-                }
-            )
-            if created:
-                create_count += 1
+            if should_update:
+                reservation, created = Reservation.objects.update_or_create(
+                    customer_id=customer_id,
+                    reservation_date=reservation_date,
+                    start_date=start_date,
+                    category=category,
+                    tour_name=tour_name,
+                    defaults={
+                        'total_cost': item.get('total_cost', 0),
+                        'total_price': item.get('total_price', 0),
+                        'payment_amount': item.get('payment_amount', 0),
+                        'status': item.get('status', 'PENDING'),
+                        'manager': manager,
+                        'details': item.get('details', {}),
+                        'requests': item.get('requests', ''),
+                        'notes': item.get('notes', '')
+                    }
+                )
+                if created:
+                    create_count += 1
+                else:
+                    update_count += 1
             else:
-                update_count += 1
+                # 핵심 필드가 누락된 경우, 새 예약으로 생성 시도
+                serializer = ReservationSerializer(data=item)
+                if serializer.is_valid():
+                    serializer.save(manager=manager)
+                    create_count += 1
+                else:
+                    errors.append({"data": item, "errors": serializer.errors})
+
         except Exception as e:
             errors.append({"data": item, "errors": str(e)})
             
-    # 최종 결과 메시지 생성
     message_parts = []
     if create_count > 0:
         message_parts.append(f"{create_count}건 신규 등록")
