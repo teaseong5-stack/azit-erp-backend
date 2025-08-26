@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('reservation-list-table')) return;
 
     // --- 1. 전역 변수 및 HTML 요소 선언 ---
@@ -10,21 +9,34 @@ document.addEventListener("DOMContentLoaded", async function() {
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     const modalSaveButton = document.getElementById('modal-save-button');
+    
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     const exportCsvButton = document.getElementById('export-csv-button');
+
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
+
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const bulkDeleteButton = document.getElementById('bulk-delete-button');
+    
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
     let allCustomers = [];
 
-// --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
+    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
+
+    async function fetchAllCustomers() {
+        const response = await window.apiFetch('customers?page_size=10000');
+        if (response && response.results) {
+            allCustomers = response.results;
+        }
+    }
 
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
@@ -47,8 +59,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         reservations.forEach(res => {
             const row = document.createElement('tr');
-            
-            // [수정] '잔액' 계산을 '마진' 계산으로 변경합니다. (판매가 - 매입가)
             const margin = (res.total_price || 0) - (res.total_cost || 0);
 
             row.innerHTML = `
@@ -94,7 +104,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
         prevPageButton.disabled = !response.previous;
         nextPageButton.disabled = !response.next;
-        selectAllCheckbox.checked = false;
+        if(selectAllCheckbox) selectAllCheckbox.checked = false;
+    }
 
     function initializeSearchableCustomerDropdown(prefix) {
         const searchInput = document.getElementById(`${prefix}-customer-search`);
@@ -348,8 +359,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         modalSaveButton.onclick = async () => {
             const form = document.getElementById('edit-reservation-form');
             const category = form.querySelector('#edit-reservation-category').value;
-            
-            // [수정] .value 뒤에 .replace(/,/g, '')를 추가하여 쉼표를 제거합니다.
             const formData = {
                 tour_name: form.querySelector('#edit-reservation-tour_name').value,
                 customer_id: form.querySelector('#edit-reservation-customer_id').value,
@@ -377,6 +386,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
         };
     }
+
+    // --- 3. 이벤트 리스너 설정 ---
 
     filterButton.addEventListener('click', () => {
         const filters = {
@@ -407,6 +418,35 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     });
 
+    selectAllCheckbox.addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('.reservation-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+    });
+
+    bulkDeleteButton.addEventListener('click', async () => {
+        const selectedCheckboxes = document.querySelectorAll('.reservation-checkbox:checked');
+        const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+        if (selectedIds.length === 0) {
+            alert('삭제할 항목을 선택해주세요.');
+            return;
+        }
+
+        if (confirm(`선택된 ${selectedIds.length}개의 예약을 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+            const response = await window.apiFetch('reservations/bulk-delete/', {
+                method: 'POST',
+                body: JSON.stringify({ ids: selectedIds })
+            });
+            if (response) {
+                alert(response.message);
+                populateReservations(currentPage, currentFilters);
+            }
+        }
+    });
+
+    // --- 4. 페이지 초기화 ---
     async function initializePage() {
         await fetchAllCustomers();
         await populateReservations(1, {});
@@ -432,8 +472,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             newReservationForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const category = newReservationForm.querySelector('#new-reservation-category').value;
-                
-                // [수정] .value 뒤에 .replace(/,/g, '')를 추가하여 쉼표를 제거합니다.
                 const formData = {
                     tour_name: newReservationForm.querySelector('#new-reservation-tour_name').value,
                     customer_id: newReservationForm.querySelector('#new-reservation-customer_id').value,
