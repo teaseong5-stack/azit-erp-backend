@@ -15,7 +15,7 @@ from .serializers import (
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
 )
 
-# --- (계정, 사용자, CSV, 고객 관련 뷰는 기존과 동일) ---
+# --- 계정 등록 뷰 ---
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
@@ -25,12 +25,14 @@ def register_user(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# --- 사용자 정보 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_info(request):
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
 
+# --- 사용자 목록 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
 def user_list(request):
@@ -38,6 +40,7 @@ def user_list(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
+# --- CSV 내보내기 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
@@ -45,7 +48,6 @@ def export_reservations_csv(request):
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
     writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
-    # [수정] 모든 사용자가 모든 데이터를 내보낼 수 있도록 변경
     reservations = Reservation.objects.select_related('customer', 'manager').order_by(F('start_date').desc(nulls_last=True))
     for res in reservations:
         writer.writerow([
@@ -57,6 +59,7 @@ def export_reservations_csv(request):
         ])
     return response
 
+# --- Customer 관련 뷰 ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def customer_list(request):
@@ -128,7 +131,6 @@ def reservation_bulk_delete(request):
     ids = request.data.get('ids', [])
     if not ids or not isinstance(ids, list):
         return Response({"error": "ID 목록이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
-    # [수정] 모든 사용자가 삭제할 수 있도록 변경 (단, 프론트에서 관리자만 버튼이 보이도록 제어하는 것이 더 안전할 수 있음)
     queryset = Reservation.objects.filter(id__in=ids)
     deleted_count, _ = queryset.delete()
     return Response({"message": f"총 {deleted_count}건의 예약이 성공적으로 삭제되었습니다."}, status=status.HTTP_200_OK)
@@ -136,18 +138,15 @@ def reservation_bulk_delete(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_list_all(request):
-    # [수정] 모든 사용자가 모든 데이터를 조회할 수 있도록 변경
-    queryset = Reservation.objects.select_related('customer', 'manager')
+    queryset = Reservation.objects.select_related('customer', 'manager').all()
     serializer = ReservationSerializer(queryset.order_by(F('start_date').desc(nulls_last=True)), many=True)
     return Response({'results': serializer.data})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
-    # [수정] 모든 사용자가 모든 데이터를 조회할 수 있도록 변경
-    queryset = Reservation.objects.select_related('manager')
+    queryset = Reservation.objects.select_related('manager').all()
     
-    # 관리자만 담당자별 필터링이 가능하도록 유지 (일반 직원은 전체 통계만 봄)
     if request.user.is_superuser:
         manager_id = request.query_params.get('manager', None)
         if manager_id:
@@ -178,8 +177,7 @@ def reservation_summary(request):
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
-        # [수정] 모든 사용자가 모든 데이터를 조회할 수 있도록 변경
-        queryset = Reservation.objects.select_related('customer', 'manager')
+        queryset = Reservation.objects.select_related('customer', 'manager').all()
         
         if request.user.is_superuser:
             manager_id = request.query_params.get('manager', None)
@@ -202,18 +200,33 @@ def reservation_list(request):
         paginated_queryset = paginator.paginate_queryset(queryset.order_by(F('start_date').desc(nulls_last=True)), request)
         serializer = ReservationSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
+
     elif request.method == 'POST':
-        data = request.data.copy()
-        manager_id = data.get('manager_id')
-        serializer = ReservationSerializer(data=data)
-        if serializer.is_valid():
-            if manager_id:
-                manager = User.objects.get(pk=manager_id)
-                serializer.save(manager=manager)
-            else:
-                serializer.save(manager=request.user)
+        data = request.data
+        try:
+            customer = Customer.objects.get(pk=data.get('customer_id'))
+            reservation = Reservation.objects.create(
+                manager=request.user,
+                customer=customer,
+                tour_name=data.get('tour_name'),
+                reservation_date=data.get('reservation_date'),
+                start_date=data.get('start_date') if data.get('start_date') else None,
+                end_date=data.get('end_date') if data.get('end_date') else None,
+                total_price=data.get('total_price', 0),
+                total_cost=data.get('total_cost', 0),
+                payment_amount=data.get('payment_amount', 0),
+                status=data.get('status', 'PENDING'),
+                category=data.get('category', 'OTHER'),
+                requests=data.get('requests', ''),
+                notes=data.get('notes', ''),
+                details=data.get('details', {})
+            )
+            serializer = ReservationSerializer(reservation)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Customer.DoesNotExist:
+            return Response({"error": "선택된 고객을 찾을 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"예약 생성 중 오류 발생: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -355,7 +368,6 @@ def partner_detail(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
-    # [수정] 모든 사용자가 모든 데이터를 조회할 수 있도록 변경
     queryset = Transaction.objects.all()
     
     year = request.query_params.get('year')
@@ -379,7 +391,6 @@ def transaction_summary(request):
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     if request.method == 'GET':
-        # [수정] 모든 사용자가 모든 데이터를 조회할 수 있도록 변경
         base_queryset = Transaction.objects.select_related('reservation__customer', 'partner', 'manager')
         queryset = base_queryset.all()
         
