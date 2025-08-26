@@ -33,8 +33,10 @@ def get_user_info(request):
     return Response(serializer.data)
 
 # --- 사용자 목록 뷰 ---
+# [수정] IsAdminUser에서 IsAuthenticated로 권한을 변경하여,
+# 로그인한 모든 사용자가 일괄 등록 기능에 필요한 사용자 목록을 조회할 수 있도록 허용합니다.
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsAuthenticated]) 
 def user_list(request):
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)

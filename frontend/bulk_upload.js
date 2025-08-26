@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function() {
+    if (!document.getElementById('upload-button')) return;
+
     const uploadButton = document.getElementById('upload-button');
     const dataInput = document.getElementById('bulk-data-input');
     const resultLog = document.getElementById('result-log');
@@ -6,26 +8,42 @@ document.addEventListener("DOMContentLoaded", async function() {
     let allCustomers = [];
     let allUsers = [];
 
+    /**
+     * 페이지 로드 시 고객 및 사용자 목록을 미리 불러와서 매핑 준비를 하는 함수
+     */
     async function fetchDataForMapping() {
-        resultLog.textContent = '고객 및 담당자 정보를 불러오는 중...';
+        resultLog.textContent = '필수 데이터(고객, 담당자)를 불러오는 중...';
+        uploadButton.disabled = true; // 데이터 로딩 중 버튼 비활성화
+
         try {
             const [customerResponse, userResponse] = await Promise.all([
                 window.apiFetch('customers?page_size=10000'),
                 window.apiFetch('users')
             ]);
+
             if (customerResponse && customerResponse.results) {
                 allCustomers = customerResponse.results;
+            } else {
+                throw new Error('고객 목록을 불러오지 못했습니다.');
             }
+
             if (userResponse) {
                 allUsers = userResponse;
+            } else {
+                throw new Error('담당자 목록을 불러오지 못했습니다.');
             }
+
             resultLog.textContent = '준비 완료. 데이터를 붙여넣고 업로드를 시작하세요.';
+            uploadButton.disabled = false; // 데이터 로딩 성공 시 버튼 활성화
+
         } catch (error) {
-            resultLog.textContent = '고객 또는 담당자 정보 로딩 실패. 페이지를 새로고침 해주세요.';
+            resultLog.textContent = `[오류] 필수 데이터 로딩 실패: ${error.message}\n페이지를 새로고침하거나 관리자에게 문의하세요.`;
+            uploadButton.disabled = true; // 오류 발생 시 버튼 비활성화 유지
         }
     }
 
     uploadButton.addEventListener('click', async () => {
+        // ... (이하 클릭 이벤트 내부 로직은 기존과 동일)
         const rawData = dataInput.value.trim();
         if (!rawData) {
             resultLog.textContent = '오류: 입력된 데이터가 없습니다.';
@@ -43,15 +61,13 @@ document.addEventListener("DOMContentLoaded", async function() {
             const customerName = columns[1].trim();
             const managerName = columns[10].trim();
             
-            // [수정] 고객 자동 생성 로직 추가
             let customer = allCustomers.find(c => c.name === customerName);
 
-            // 만약 고객이 존재하지 않으면, 새로 생성합니다.
             if (!customer && customerName) {
                 resultLog.textContent += `\n'${customerName}' 고객 정보가 없어 새로 등록합니다...`;
                 const newCustomerData = { 
                     name: customerName, 
-                    phone_number: '정보 없음' // 기본값 설정
+                    phone_number: '정보 없음'
                 };
                 
                 const newCustomer = await window.apiFetch('customers', {
@@ -60,12 +76,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                 });
 
                 if (newCustomer) {
-                    allCustomers.push(newCustomer); // 다음 검색을 위해 로컬 목록에 추가
+                    allCustomers.push(newCustomer);
                     customer = newCustomer;
                     resultLog.textContent += `\n'${customerName}' 고객 등록 완료 (ID: ${customer.id}).`;
                 } else {
                     resultLog.textContent += `\n[오류] '${customerName}' 고객 생성 실패. 이 예약은 건너뜁니다.`;
-                    continue; // 고객 생성 실패 시 해당 예약 건너뛰기
+                    continue;
                 }
             }
             
