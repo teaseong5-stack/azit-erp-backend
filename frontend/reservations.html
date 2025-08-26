@@ -25,6 +25,8 @@
             <li class="nav-item has-submenu">
                 <a class="nav-link active" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
                 <ul class="submenu">
+                    <li><a class="nav-link" href="reservations.html?action=new">새 예약 등록</a></li>
+                    <li><a class="nav-link" href="reservations.html">예약 목록</a></li>
                     <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
                 </ul>
             </li>
@@ -42,6 +44,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>예약 관리</h1>
             <div>
+                <button class="btn btn-primary" id="show-new-reservation-modal"><i class="bi bi-plus-circle-fill me-2"></i>새 예약 등록</button>
                 <button class="btn btn-success" id="export-csv-button"><i class="bi bi-file-earmark-spreadsheet-fill me-2"></i>CSV 내보내기</button>
                 <button id="logout-button" class="btn btn-outline-danger">로그아웃</button>
             </div>
@@ -49,9 +52,6 @@
         
         <div class="card mb-4">
             <div class="card-body">
-                <h2 class="card-title">새 예약 등록</h2>
-                <form id="reservation-form" class="mb-3"></form>
-                
                 <h3 class="mt-4">예약 목록</h3>
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="row g-3 flex-grow-1">
@@ -78,7 +78,6 @@
                                 <th>상품명</th>
                                 <th>매입가</th>
                                 <th>판매가</th>
-                                <!-- [수정] '잔액'을 '마진'으로 변경 -->
                                 <th>마진</th>
                                 <th>상태</th>
                                 <th>담당</th>
@@ -100,6 +99,21 @@
             </div>
         </div>
     </main>
+
+    <!-- 새 예약 등록 모달 -->
+    <div class="modal fade" id="newReservationModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">새 예약 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="new-reservation-form-container">
+                    <!-- 자바스크립트가 여기에 폼을 생성합니다. -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 예약 수정/상세보기 모달 -->
     <div class="modal fade" id="reservationModal" tabindex="-1">

@@ -1,15 +1,23 @@
 document.addEventListener("DOMContentLoaded", async function() {
+    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('reservation-list-table')) return;
 
     // --- 1. 전역 변수 및 HTML 요소 선언 ---
     const user = await window.apiFetch('user-info');
     const reservationListTable = document.getElementById('reservation-list-table');
-    const reservationFormContainer = document.getElementById('reservation-form');
+    
+    // 새 예약 모달 관련 요소
+    const newReservationModal = new bootstrap.Modal(document.getElementById('newReservationModal'));
+    const newReservationFormContainer = document.getElementById('new-reservation-form-container');
+    const showNewReservationModalButton = document.getElementById('show-new-reservation-modal');
+
+    // 수정 모달 관련 요소
     const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     const modalSaveButton = document.getElementById('modal-save-button');
     
+    // 필터 요소
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
@@ -17,13 +25,16 @@ document.addEventListener("DOMContentLoaded", async function() {
     const filterButton = document.getElementById('filter-button');
     const exportCsvButton = document.getElementById('export-csv-button');
 
+    // 페이지네이션 요소
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
 
+    // 일괄 삭제 요소
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
     const bulkDeleteButton = document.getElementById('bulk-delete-button');
     
+    // 상태 변수
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
@@ -446,13 +457,17 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     });
 
+    showNewReservationModalButton.addEventListener('click', () => {
+        newReservationModal.show();
+    });
+
     // --- 4. 페이지 초기화 ---
     async function initializePage() {
         await fetchAllCustomers();
         await populateReservations(1, {});
         
         const formHtml = renderFormFields('new-reservation');
-        reservationFormContainer.innerHTML = formHtml;
+        newReservationFormContainer.innerHTML = formHtml;
         
         initializeSearchableCustomerDropdown('new-reservation');
         
@@ -494,12 +509,18 @@ document.addEventListener("DOMContentLoaded", async function() {
                 });
 
                 if (response) {
+                    newReservationModal.hide();
                     newReservationForm.reset();
                     newCategorySelect.value = 'TOUR';
                     handleCategoryChange('new-reservation');
                     populateReservations(1, {});
                 }
             });
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'new') {
+            newReservationModal.show();
         }
     }
 
