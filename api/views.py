@@ -33,8 +33,6 @@ def get_user_info(request):
     return Response(serializer.data)
 
 # --- 사용자 목록 뷰 ---
-# [수정] IsAdminUser에서 IsAuthenticated로 권한을 변경하여,
-# 로그인한 모든 사용자가 일괄 등록 기능에 필요한 사용자 목록을 조회할 수 있도록 허용합니다.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
 def user_list(request):
@@ -129,60 +127,6 @@ def customer_detail(request, pk):
         customer.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# [새로 추가된 뷰]
-# 필터 조건에 맞는 예약 데이터의 요약 정보를 계산하는 API
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def reservation_summary(request):
-    base_queryset = Reservation.objects.select_related('manager')
-
-    if request.user.is_superuser:
-        queryset = base_queryset.all()
-    else:
-        queryset = base_queryset.filter(manager=request.user)
-    
-    if request.user.is_superuser:
-        manager_id = request.query_params.get('manager', None)
-        if manager_id:
-            queryset = queryset.filter(manager_id=manager_id)
-
-    category = request.query_params.get('category', None)
-    search = request.query_params.get('search', None)
-    start_date_gte = request.query_params.get('start_date__gte', None)
-    start_date_lte = request.query_params.get('start_date__lte', None)
-
-    if category:
-        queryset = queryset.filter(category=category)
-    if search:
-        queryset = queryset.filter(
-            Q(tour_name__icontains=search) | Q(customer__name__icontains=search)
-        )
-    if start_date_gte:
-        queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
-    if start_date_lte:
-        queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
-
-    # 합계 계산
-    totals = queryset.aggregate(
-        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
-        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
-    )
-    totals['total_margin'] = totals['total_sales'] - totals['total_cost']
-
-    # 담당자별 건수 계산
-    manager_counts = list(
-        queryset.values('manager__username')
-                 .annotate(count=Count('id'))
-                 .order_by('-count')
-    )
-
-    summary_data = {
-        "totals": totals,
-        "manager_counts": manager_counts
-    }
-    
-    return Response(summary_data)
-
 # --- Reservation 관련 뷰 ---
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -241,7 +185,7 @@ def reservation_summary(request):
     summary_data = {"totals": totals, "manager_counts": manager_counts}
     return Response(summary_data)
 
-api_view(['GET', 'POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
@@ -283,9 +227,7 @@ def reservation_list(request):
                 serializer.save(manager=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-# [수정된 뷰]
-# 예약 일괄 등록 시, 중복 데이터는 덮어쓰도록 로직을 수정합니다.
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reservation_bulk_import(request):
@@ -312,10 +254,8 @@ def reservation_bulk_import(request):
         reservation_date = item.get('reservation_date')
         start_date = item.get('start_date')
         category = item.get('category')
-        tour_name = item.get('tour_name')        
+        tour_name = item.get('tour_name')
 
-# [수정] 5가지 핵심 필드가 모두 존재할 경우에만 덮어쓰기를 시도하고,
-        # 하나라도 비어있으면 무조건 새로 생성하도록 로직을 변경합니다.
         should_update = all([customer_id, reservation_date, start_date, category, tour_name])
 
         try:
@@ -342,7 +282,6 @@ def reservation_bulk_import(request):
                 else:
                     update_count += 1
             else:
-                # 핵심 필드가 누락된 경우, 새 예약으로 생성 시도
                 serializer = ReservationSerializer(data=item)
                 if serializer.is_valid():
                     serializer.save(manager=manager)
@@ -425,25 +364,7 @@ def partner_detail(request, pk):
         partner.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# [새로 추가된 뷰]
-# 대시보드와 리포트에서 사용할, 페이지가 나뉘지 않은 '전체' 예약 목록을 반환하는 API
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def reservation_list_all(request):
-    base_queryset = Reservation.objects.select_related('customer', 'manager')
-
-    if request.user.is_superuser:
-        queryset = base_queryset.all()
-    else:
-        queryset = base_queryset.filter(manager=request.user)
-    
-    serializer = ReservationSerializer(queryset.order_by(F('start_date').desc(nulls_last=True)), many=True)
-    
-    # 프론트엔드가 데이터를 처리할 수 있도록 'results' 키에 담아서 반환
-    return Response({'results': serializer.data})
-
 # --- Transaction 관련 뷰 ---
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
@@ -451,32 +372,21 @@ def transaction_summary(request):
         queryset = Transaction.objects.all()
     else:
         queryset = Transaction.objects.filter(manager=request.user)
-
     year = request.query_params.get('year')
     month = request.query_params.get('month')
-
     if year and month:
         queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
-
-    # [수정] 기존 합계에 더해, 결제 수단별 합계를 계산하는 로직을 추가합니다.
     summary = queryset.aggregate(
-        # 전체 합계
         total_income=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME')), Value(0), output_field=DecimalField()),
         total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField()),
-        
-        # 수입 상세
         income_card=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='CARD')), Value(0), output_field=DecimalField()),
         income_cash=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='CASH')), Value(0), output_field=DecimalField()),
         income_transfer=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME', payment_method='TRANSFER')), Value(0), output_field=DecimalField()),
-
-        # 지출 상세
         expense_card=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='CARD')), Value(0), output_field=DecimalField()),
         expense_cash=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='CASH')), Value(0), output_field=DecimalField()),
         expense_transfer=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE', payment_method='TRANSFER')), Value(0), output_field=DecimalField())
     )
-    
     summary['balance'] = summary['total_income'] - summary['total_expense']
-    
     return Response(summary)
 
 @api_view(['GET', 'POST'])
