@@ -24,14 +24,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentFilters = {};
     let allCustomers = [];
 
-    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
-
-    async function fetchAllCustomers() {
-        const response = await window.apiFetch('customers?page_size=10000');
-        if (response && response.results) {
-            allCustomers = response.results;
-        }
-    }
+// --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
 
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
@@ -54,10 +47,12 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         reservations.forEach(res => {
             const row = document.createElement('tr');
-            const balance = (res.total_price || 0) - (res.payment_amount || 0);
+            
+            // [수정] '잔액' 계산을 '마진' 계산으로 변경합니다. (판매가 - 매입가)
+            const margin = (res.total_price || 0) - (res.total_cost || 0);
 
             row.innerHTML = `
-                <td>${res.id}</td>
+                <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
                 <td>${res.reservation_date || 'N/A'}</td>
                 <td>${res.start_date || '미정'}</td>
@@ -65,7 +60,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${res.tour_name}</td>
                 <td>${Number(res.total_cost).toLocaleString()} VND</td>
                 <td>${Number(res.total_price).toLocaleString()} VND</td>
-                <td class="${balance > 0 ? 'text-danger' : 'text-success'} fw-bold">${Number(balance).toLocaleString()} VND</td>
+                <td class="${margin >= 0 ? 'text-primary' : 'text-danger'} fw-bold">${Number(margin).toLocaleString()} VND</td>
                 <td><span class="badge bg-primary">${res.status}</span></td>
                 <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>
@@ -99,7 +94,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
         prevPageButton.disabled = !response.previous;
         nextPageButton.disabled = !response.next;
-    }
+        selectAllCheckbox.checked = false;
 
     function initializeSearchableCustomerDropdown(prefix) {
         const searchInput = document.getElementById(`${prefix}-customer-search`);
