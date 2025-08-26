@@ -48,7 +48,7 @@ def export_reservations_csv(request):
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
     writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
-    reservations = Reservation.objects.select_related('customer', 'manager').order_by(F('start_date').desc(nulls_last=True))
+    reservations = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
     for res in reservations:
         writer.writerow([
             res.id, res.get_category_display(), res.tour_name,
@@ -125,15 +125,60 @@ def customer_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- Reservation 관련 뷰 ---
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reservation_bulk_delete(request):
+    ids = request.data.get('ids', [])
+    if not ids or not isinstance(ids, list):
+        return Response({"error": "ID 목록이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+    queryset = Reservation.objects.filter(id__in=ids)
+    deleted_count, _ = queryset.delete()
+    return Response({"message": f"총 {deleted_count}건의 예약이 성공적으로 삭제되었습니다."}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reservation_list_all(request):
+    queryset = Reservation.objects.select_related('customer', 'manager').all()
+    serializer = ReservationSerializer(queryset.order_by('-reservation_date'), many=True)
+    return Response({'results': serializer.data})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reservation_summary(request):
+    queryset = Reservation.objects.select_related('manager').all()
+    
+    if request.user.is_superuser:
+        manager_id = request.query_params.get('manager', None)
+        if manager_id:
+            queryset = queryset.filter(manager_id=manager_id)
+            
+    category = request.query_params.get('category', None)
+    search = request.query_params.get('search', None)
+    start_date_gte = request.query_params.get('start_date__gte', None)
+    start_date_lte = request.query_params.get('start_date__lte', None)
+    if category:
+        queryset = queryset.filter(category=category)
+    if search:
+        queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
+    if start_date_gte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
+    if start_date_lte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
+    totals = queryset.aggregate(
+        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
+        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
+    )
+    totals['total_margin'] = totals['total_sales'] - totals['total_cost']
+    manager_counts = list(queryset.values('manager__username').annotate(count=Count('id')).order_by('-count'))
+    summary_data = {"totals": totals, "manager_counts": manager_counts}
+    return Response(summary_data)
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
     if request.method == 'GET':
         base_queryset = Reservation.objects.select_related('customer', 'manager')
-        
         queryset = base_queryset.all()
-        if not request.user.is_superuser:
-            queryset = queryset.filter(manager=request.user)
         
         if request.user.is_superuser:
             manager_id = request.query_params.get('manager', None)
@@ -159,8 +204,6 @@ def reservation_list(request):
         paginator = PageNumberPagination()
         paginator.page_size = 50
         
-        # [수정] 정렬 기준을 'start_date'(시작일)에서 'reservation_date'(예약일)로 변경합니다.
-        # '-' 접두사는 내림차순(최신순)을 의미합니다.
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-reservation_date'), request)
         
         serializer = ReservationSerializer(paginated_queryset, many=True)
