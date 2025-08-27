@@ -15,7 +15,7 @@ from .serializers import (
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
 )
 
-# --- 계정 등록 뷰 ---
+# --- (다른 뷰들은 변경 없음) ---
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
@@ -25,14 +25,12 @@ def register_user(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# --- 사용자 정보 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_info(request):
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
 
-# --- 사용자 목록 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
 def user_list(request):
@@ -40,7 +38,6 @@ def user_list(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
-# --- CSV 내보내기 뷰 ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
@@ -59,7 +56,6 @@ def export_reservations_csv(request):
         ])
     return response
 
-# --- Customer 관련 뷰 ---
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def customer_list(request):
