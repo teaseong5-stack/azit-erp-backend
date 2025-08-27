@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // accounting.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('transaction-list-table')) return;
 
     // --- 1. HTML 요소 및 전역 변수 선언 ---
@@ -11,8 +10,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     const managerSelect = document.getElementById('trans-manager');
     const transTypeSelect = document.getElementById('trans-type');
     const expenseItemWrapper = document.getElementById('expense-item-wrapper');
-    
-    // 현황판 요소
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpenseEl = document.getElementById('total-expense');
     const balanceEl = document.getElementById('balance');
@@ -22,27 +19,19 @@ document.addEventListener("DOMContentLoaded", async function() {
     const expenseCardEl = document.getElementById('expense-card');
     const expenseCashEl = document.getElementById('expense-cash');
     const expenseTransferEl = document.getElementById('expense-transfer');
-
-    // 현황판 필터 요소
     const summaryYearSelect = document.getElementById('summary-year-select');
     const summaryMonthSelect = document.getElementById('summary-month-select');
     const summaryFilterButton = document.getElementById('summary-filter-button');
     const summaryResetButton = document.getElementById('summary-reset-button');
-
-    // 목록 필터 요소
     const filterSearchInput = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     const filterResetButton = document.getElementById('filter-reset-button');
-
-    // 수정 모달 요소
     const editModal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
     const editModalSaveButton = document.getElementById('edit-transaction-save-button');
     const editReservationSelect = document.getElementById('edit-trans-reservation');
     const editPartnerSelect = document.getElementById('edit-trans-partner');
-
-    // 페이지네이션 관련 요소 및 상태 변수
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
@@ -58,7 +47,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             const params = new URLSearchParams({ year, month });
             endpoint += `?${params.toString()}`;
         }
-        
         const summary = await window.apiFetch(endpoint);
         if (summary) {
             totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
@@ -206,7 +194,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         nextPageButton.disabled = !response.next;
     }
 
-    // [수정] 누락되었던 applyFilters 함수를 다시 추가합니다.
     function applyFilters() {
         const filters = {};
         if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();

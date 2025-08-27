@@ -34,11 +34,10 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
         }
 
         if (response.status === 204) {
-            return { success: true }; // 삭제 성공 시에도 성공 객체를 반환하도록 수정
+            return { success: true };
         }
 
         if (!response.ok) {
-            // [수정] 서버가 JSON이 아닌 다른 형식의 오류를 보내도 처리할 수 있도록 로직을 강화합니다.
             let errorBody;
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.indexOf("application/json") !== -1) {
