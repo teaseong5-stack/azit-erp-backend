@@ -37,22 +37,7 @@ class ReservationSerializer(serializers.ModelSerializer):
     manager_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     class Meta:
         model = Reservation
-        fields = '__all__' # 모든 필드를 포함
-    
-    def create(self, validated_data):
-        customer_id = validated_data.pop('customer_id', None)
-        customer = Customer.objects.get(pk=customer_id) if customer_id else None
-        reservation = Reservation.objects.create(customer=customer, **validated_data)
-        return reservation
-
-    def update(self, instance, validated_data):
-        customer_id = validated_data.pop('customer_id', None)
-        if customer_id:
-            instance.customer = Customer.objects.get(pk=customer_id)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+        fields = '__all__'
 
 class TransactionSerializer(serializers.ModelSerializer):
     reservation = ReservationSerializer(read_only=True, allow_null=True)
@@ -71,11 +56,15 @@ class TransactionSerializer(serializers.ModelSerializer):
         partner_id = validated_data.pop('partner_id', None)
         manager_id = validated_data.pop('manager_id', None)
         
-        if reservation_id:
-            validated_data['reservation'] = Reservation.objects.get(pk=reservation_id)
-        if partner_id:
-            validated_data['partner'] = Partner.objects.get(pk=partner_id)
-        if manager_id:
-            validated_data['manager'] = User.objects.get(pk=manager_id)
-            
-        return Transaction.objects.create(**validated_data)
+        # [수정] 관련 항목이 존재하지 않을 경우를 대비하여 try-except 블록을 추가합니다.
+        try:
+            if reservation_id:
+                validated_data['reservation'] = Reservation.objects.get(pk=reservation_id)
+            if partner_id:
+                validated_data['partner'] = Partner.objects.get(pk=partner_id)
+        except (Reservation.DoesNotExist, Partner.DoesNotExist):
+            # 관련 항목을 찾지 못하면, validation error를 발생시켜 사용자에게 알립니다.
+            raise serializers.ValidationError("선택한 관련 예약 또는 제휴업체가 존재하지 않습니다.")
+
+        transaction = Transaction.objects.create(**validated_data)
+        return transaction

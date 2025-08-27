@@ -191,14 +191,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         nextPageButton.disabled = !response.next;
     }
 
-    function applyFilters() {
-        const filters = {};
-        if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
-        if (filterStartDate.value) filters.date_after = filterStartDate.value;
-        if (filterEndDate.value) filters.date_before = filterEndDate.value;
-        populateTransactions(1, filters);
-    }
-
+// [수정] 새 거래 등록 폼 제출 이벤트를 수정합니다.
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -213,11 +206,16 @@ document.addEventListener("DOMContentLoaded", async function() {
             reservation_id: reservationSelect.value || null,
             partner_id: partnerSelect.value || null,
         };
-        await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
-        transactionForm.reset();
-        expenseItemWrapper.style.display = 'none';
-        populateTransactions(1, currentFilters);
-        updateSummaryCards();
+
+        // API 호출 후, 성공했을 때만 다음 로직을 실행합니다.
+        const response = await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
+        
+        if (response) {
+            transactionForm.reset();
+            expenseItemWrapper.style.display = 'none';
+            populateTransactions(1, {}); // 첫 페이지로 새로고침
+            updateSummaryCards(); // 현황판도 갱신
+        }
     });
     
     transTypeSelect.addEventListener('change', () => {

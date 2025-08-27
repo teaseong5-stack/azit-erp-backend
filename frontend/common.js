@@ -1,9 +1,7 @@
 // 이 파일은 모든 페이지에서 공통으로 사용하는 기능(API 통신, 로그인/로그아웃 등)을 담당합니다.
 
-// --- 1. API 기본 주소 설정 ---
 window.API_BASE_URL = 'https://azit-erp-backend-1.onrender.com/api'; 
 
-// --- 2. 인증 확인 ---
 (function() {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken && !window.location.pathname.endsWith('index.html') && !window.location.pathname.endsWith('register.html')) {
@@ -11,7 +9,6 @@ window.API_BASE_URL = 'https://azit-erp-backend-1.onrender.com/api';
     }
 })();
 
-// --- 3. 공통 유틸리티 함수 ---
 window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     const headers = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -36,16 +33,23 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
             return null;
         }
 
-        // [수정] 204 No Content 상태 코드를 확인하는 로직을 추가합니다.
-        // 삭제 성공 시에는 내용이 없으므로, json() 파싱을 건너뜁니다.
         if (response.status === 204) {
-            return null; 
+            return { success: true }; // 삭제 성공 시에도 성공 객체를 반환하도록 수정
         }
 
         if (!response.ok) {
-            const errorBody = await response.json();
+            // [수정] 서버가 JSON이 아닌 다른 형식의 오류를 보내도 처리할 수 있도록 로직을 강화합니다.
+            let errorBody;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                errorBody = await response.json();
+            } else {
+                errorBody = { error: await response.text() };
+            }
+            
             console.error(`API Error on ${endpoint}:`, errorBody);
-            alert(`오류가 발생했습니다: ${JSON.stringify(errorBody)}`);
+            const errorMessage = errorBody.detail || JSON.stringify(errorBody);
+            alert(`오류가 발생했습니다: ${errorMessage}`);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
@@ -56,7 +60,6 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     }
 }
 
-// --- 4. 공통 UI 이벤트 리스너 ---
 window.addEventListener('load', async () => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
