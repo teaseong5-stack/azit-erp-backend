@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", async function() {
+    // accounting.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('transaction-list-table')) return;
 
+    // --- 1. HTML 요소 및 전역 변수 선언 ---
     const user = await window.apiFetch('user-info');
     const transactionListTable = document.getElementById('transaction-list-table');
     const transactionForm = document.getElementById('transaction-form');
@@ -9,6 +11,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     const managerSelect = document.getElementById('trans-manager');
     const transTypeSelect = document.getElementById('trans-type');
     const expenseItemWrapper = document.getElementById('expense-item-wrapper');
+    
+    // 현황판 요소
     const totalIncomeEl = document.getElementById('total-income');
     const totalExpenseEl = document.getElementById('total-expense');
     const balanceEl = document.getElementById('balance');
@@ -18,19 +22,27 @@ document.addEventListener("DOMContentLoaded", async function() {
     const expenseCardEl = document.getElementById('expense-card');
     const expenseCashEl = document.getElementById('expense-cash');
     const expenseTransferEl = document.getElementById('expense-transfer');
+
+    // 현황판 필터 요소
     const summaryYearSelect = document.getElementById('summary-year-select');
     const summaryMonthSelect = document.getElementById('summary-month-select');
     const summaryFilterButton = document.getElementById('summary-filter-button');
     const summaryResetButton = document.getElementById('summary-reset-button');
+
+    // 목록 필터 요소
     const filterSearchInput = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     const filterResetButton = document.getElementById('filter-reset-button');
+
+    // 수정 모달 요소
     const editModal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
     const editModalSaveButton = document.getElementById('edit-transaction-save-button');
     const editReservationSelect = document.getElementById('edit-trans-reservation');
     const editPartnerSelect = document.getElementById('edit-trans-partner');
+
+    // 페이지네이션 관련 요소 및 상태 변수
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
@@ -38,12 +50,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
 
+    // --- 2. 데이터 로딩 및 화면 구성 함수 ---
+
     async function updateSummaryCards(year = null, month = null) {
         let endpoint = 'transactions/summary';
         if (year && month) {
             const params = new URLSearchParams({ year, month });
             endpoint += `?${params.toString()}`;
         }
+        
         const summary = await window.apiFetch(endpoint);
         if (summary) {
             totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
@@ -191,7 +206,17 @@ document.addEventListener("DOMContentLoaded", async function() {
         nextPageButton.disabled = !response.next;
     }
 
-// [수정] 새 거래 등록 폼 제출 이벤트를 수정합니다.
+    // [수정] 누락되었던 applyFilters 함수를 다시 추가합니다.
+    function applyFilters() {
+        const filters = {};
+        if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
+        if (filterStartDate.value) filters.date_after = filterStartDate.value;
+        if (filterEndDate.value) filters.date_before = filterEndDate.value;
+        populateTransactions(1, filters);
+    }
+
+    // --- 3. 이벤트 리스너 설정 ---
+
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -206,21 +231,19 @@ document.addEventListener("DOMContentLoaded", async function() {
             reservation_id: reservationSelect.value || null,
             partner_id: partnerSelect.value || null,
         };
-
-        // API 호출 후, 성공했을 때만 다음 로직을 실행합니다.
         const response = await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
-        
         if (response) {
             transactionForm.reset();
             expenseItemWrapper.style.display = 'none';
-            populateTransactions(1, {}); // 첫 페이지로 새로고침
-            updateSummaryCards(); // 현황판도 갱신
+            populateTransactions(1, {});
+            updateSummaryCards();
         }
     });
     
     transTypeSelect.addEventListener('change', () => {
         expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
     });
+
     filterButton.addEventListener('click', applyFilters);
     filterSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
     filterResetButton.addEventListener('click', () => {
@@ -229,6 +252,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         filterEndDate.value = '';
         populateTransactions(1, {});
     });
+
     summaryFilterButton.addEventListener('click', () => {
         const selectedYear = summaryYearSelect.value;
         const selectedMonth = summaryMonthSelect.value;
@@ -237,6 +261,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     summaryResetButton.addEventListener('click', () => {
         updateSummaryCards();
     });
+
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters);
     });
@@ -244,6 +269,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (currentPage < totalPages) populateTransactions(currentPage + 1, currentFilters);
     });
 
+    // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
         populateYearMonthDropdowns();
         await updateSummaryCards();
