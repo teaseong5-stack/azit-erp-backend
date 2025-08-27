@@ -34,7 +34,14 @@
             </li>
             <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a></li>
             <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building me-2"></i>제휴업체 관리</a></li>
-            <li class="nav-item"><a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a></li>
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="accounting.html?action=new">새 거래 등록</a></li>
+                    <li><a class="nav-link" href="monthly_status.html">월별 현황 조회</a></li>
+                    <li><a class="nav-link" href="accounting.html">거래 내역</a></li>
+                </ul>
+            </li>
         </ul>
         <ul id="admin-menu" class="nav flex-column mt-auto">
             <li class="nav-item"><a class="nav-link" href="https://azit-erp-backend-1.onrender.com/admin/" target="_blank"><i class="bi bi-gear-fill me-2"></i>설정</a></li>

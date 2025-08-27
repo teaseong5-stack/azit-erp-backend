@@ -4,6 +4,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 1. HTML 요소 및 전역 변수 선언 ---
     const user = await window.apiFetch('user-info');
     const transactionListTable = document.getElementById('transaction-list-table');
+    
+    // 새 거래 등록 모달 관련
+    const newTransactionModal = new bootstrap.Modal(document.getElementById('newTransactionModal'));
+    const showNewTransactionModalButton = document.getElementById('show-new-transaction-modal');
+    const transactionForm = document.getElementById('transaction-form');
+
+    // --- 1. HTML 요소 및 전역 변수 선언 ---
+    const user = await window.apiFetch('user-info');
+    const transactionListTable = document.getElementById('transaction-list-table');
     const transactionForm = document.getElementById('transaction-form');
     const reservationSelect = document.getElementById('trans-reservation');
     const partnerSelect = document.getElementById('trans-partner');
@@ -203,7 +212,9 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     // --- 3. 이벤트 리스너 설정 ---
-
+    showNewTransactionModalButton.addEventListener('click', () => {
+        newTransactionModal.show();
+    });
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -220,10 +231,10 @@ document.addEventListener("DOMContentLoaded", async function() {
         };
         const response = await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
         if (response) {
+            newTransactionModal.hide(); // 성공 시 팝업 닫기
             transactionForm.reset();
             expenseItemWrapper.style.display = 'none';
             populateTransactions(1, {});
-            updateSummaryCards();
         }
     });
     
@@ -258,10 +269,14 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
-        populateYearMonthDropdowns();
-        await updateSummaryCards();
         await populateSelectOptions();
         await populateTransactions(1, {});
+
+        // 다른 페이지에서 하위 메뉴를 통해 접근했는지 확인하고 팝업을 자동으로 엽니다.
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'new') {
+            newTransactionModal.show();
+        }
     }
     initializePage();
 });
