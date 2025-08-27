@@ -5,29 +5,18 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 1. HTML 요소 및 전역 변수 선언 ---
     const user = await window.apiFetch('user-info');
     const transactionListTable = document.getElementById('transaction-list-table');
+    
+    // 새 거래 등록 모달 관련
+    const newTransactionModal = new bootstrap.Modal(document.getElementById('newTransactionModal'));
+    const showNewTransactionModalButton = document.getElementById('show-new-transaction-modal');
     const transactionForm = document.getElementById('transaction-form');
+    
+    // 폼 내부 요소
     const reservationSelect = document.getElementById('trans-reservation');
     const partnerSelect = document.getElementById('trans-partner');
     const managerSelect = document.getElementById('trans-manager');
     const transTypeSelect = document.getElementById('trans-type');
     const expenseItemWrapper = document.getElementById('expense-item-wrapper');
-    
-    // 현황판 요소
-    const totalIncomeEl = document.getElementById('total-income');
-    const totalExpenseEl = document.getElementById('total-expense');
-    const balanceEl = document.getElementById('balance');
-    const incomeCardEl = document.getElementById('income-card');
-    const incomeCashEl = document.getElementById('income-cash');
-    const incomeTransferEl = document.getElementById('income-transfer');
-    const expenseCardEl = document.getElementById('expense-card');
-    const expenseCashEl = document.getElementById('expense-cash');
-    const expenseTransferEl = document.getElementById('expense-transfer');
-
-    // 현황판 필터 요소
-    const summaryYearSelect = document.getElementById('summary-year-select');
-    const summaryMonthSelect = document.getElementById('summary-month-select');
-    const summaryFilterButton = document.getElementById('summary-filter-button');
-    const summaryResetButton = document.getElementById('summary-reset-button');
 
     // 목록 필터 요소
     const filterSearchInput = document.getElementById('filter-search');
@@ -51,47 +40,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentFilters = {};
 
     // --- 2. 데이터 로딩 및 화면 구성 함수 ---
-
-    async function updateSummaryCards(year = null, month = null) {
-        let endpoint = 'transactions/summary';
-        if (year && month) {
-            const params = new URLSearchParams({ year, month });
-            endpoint += `?${params.toString()}`;
-        }
-        
-        const summary = await window.apiFetch(endpoint);
-        if (summary) {
-            totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
-            totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
-            balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
-            incomeCardEl.textContent = `${Number(summary.income_card).toLocaleString()}`;
-            incomeCashEl.textContent = `${Number(summary.income_cash).toLocaleString()}`;
-            incomeTransferEl.textContent = `${Number(summary.income_transfer).toLocaleString()}`;
-            expenseCardEl.textContent = `${Number(summary.expense_card).toLocaleString()}`;
-            expenseCashEl.textContent = `${Number(summary.expense_cash).toLocaleString()}`;
-            expenseTransferEl.textContent = `${Number(summary.expense_transfer).toLocaleString()}`;
-        }
-    }
-
-    function populateYearMonthDropdowns() {
-        const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth() + 1;
-        for (let i = 0; i < 5; i++) {
-            const year = currentYear - i;
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = `${year}년`;
-            summaryYearSelect.appendChild(option);
-        }
-        for (let i = 1; i <= 12; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = `${i}월`;
-            summaryMonthSelect.appendChild(option);
-        }
-        summaryYearSelect.value = currentYear;
-        summaryMonthSelect.value = currentMonth;
-    }
 
     async function populateSelectOptions() {
         const [reservationsResponse, partners] = await Promise.all([
@@ -216,6 +164,10 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 3. 이벤트 리스너 설정 ---
 
+    showNewTransactionModalButton.addEventListener('click', () => {
+        newTransactionModal.show();
+    });
+
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = {
@@ -232,10 +184,10 @@ document.addEventListener("DOMContentLoaded", async function() {
         };
         const response = await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
         if (response) {
+            newTransactionModal.hide();
             transactionForm.reset();
             expenseItemWrapper.style.display = 'none';
             populateTransactions(1, {});
-            updateSummaryCards();
         }
     });
     
@@ -252,15 +204,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         populateTransactions(1, {});
     });
 
-    summaryFilterButton.addEventListener('click', () => {
-        const selectedYear = summaryYearSelect.value;
-        const selectedMonth = summaryMonthSelect.value;
-        updateSummaryCards(selectedYear, selectedMonth);
-    });
-    summaryResetButton.addEventListener('click', () => {
-        updateSummaryCards();
-    });
-
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters);
     });
@@ -270,10 +213,13 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
-        populateYearMonthDropdowns();
-        await updateSummaryCards();
         await populateSelectOptions();
         await populateTransactions(1, {});
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'new') {
+            newTransactionModal.show();
+        }
     }
     initializePage();
 });
