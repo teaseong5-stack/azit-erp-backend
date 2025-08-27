@@ -16,8 +16,8 @@ urlpatterns = [
     path('reservations/', views.reservation_list),
     path('reservations/all/', views.reservation_list_all),
     path('reservations/summary/', views.reservation_summary),
-    path('reservations/bulk/', views.reservation_bulk_import),
-    path('reservations/bulk-delete/', views.reservation_bulk_delete), # [추가된 경로]
+    path('reservations/bulk/', views.reservation_bulk_import), # 중복된 경로 하나를 삭제
+    path('reservations/bulk-delete/', views.reservation_bulk_delete),
     path('reservations/<int:pk>/', views.reservation_detail),
 
     # Report & Partner URLs

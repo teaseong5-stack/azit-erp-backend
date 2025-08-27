@@ -20,9 +20,14 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     const config = { ...options, headers };
     
     try {
-        const cleanedBase = window.API_BASE_URL.replace(/\/$/, '');
-        const cleanedEndpoint = endpoint.replace(/^\//, '');
-        const url = `${cleanedBase}/${cleanedEndpoint}`;
+        // [수정] URL에 파라미터(?가 포함된 경우)가 있어도 올바른 위치에 슬래시(/)를 추가하도록 로직을 개선합니다.
+        const cleanedBase = window.API_BASE_URL.replace(/\/$/, ''); // BASE_URL 끝에 /가 있으면 제거
+        const [path, queryString] = endpoint.split('?');
+        const cleanedPath = path.replace(/^\//, ''); // endpoint 앞에 /가 있으면 제거
+        const formattedPath = cleanedPath.endsWith('/') ? cleanedPath : `${cleanedPath}/`;
+        
+        const finalEndpoint = queryString ? `${formattedPath}?${queryString}` : formattedPath;
+        const url = `${cleanedBase}/${finalEndpoint}`;
 
         const response = await fetch(url, config);
         
