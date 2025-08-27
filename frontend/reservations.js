@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function() {
     if (!document.getElementById('reservation-list-table')) return;
 
+    // --- 1. 전역 변수 및 HTML 요소 선언 ---
     const user = await window.apiFetch('user-info');
     const reservationListTable = document.getElementById('reservation-list-table');
     const newReservationModal = new bootstrap.Modal(document.getElementById('newReservationModal'));
@@ -26,6 +27,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentFilters = {};
     let allCustomers = [];
 
+    // --- 2. 데이터 로딩 및 화면 렌더링 함수 ---
+
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
         if (response && response.results) {
@@ -37,20 +40,25 @@ document.addEventListener("DOMContentLoaded", async function() {
         currentFilters = filters;
         const params = new URLSearchParams({ page, ...filters });
         const endpoint = `reservations?${params.toString()}`;
+        
         const response = await window.apiFetch(endpoint);
         reservationListTable.innerHTML = '';
+
         if (!response || !response.results) {
             pageInfo.textContent = '데이터가 없습니다.';
             prevPageButton.disabled = true;
             nextPageButton.disabled = true;
             return;
         }
+
         const reservations = response.results;
         const totalCount = response.count;
         totalPages = Math.ceil(totalCount / 50);
+
         reservations.forEach(res => {
             const row = document.createElement('tr');
             const margin = (res.total_price || 0) - (res.total_cost || 0);
+
             row.innerHTML = `
                 <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
@@ -68,10 +76,12 @@ document.addEventListener("DOMContentLoaded", async function() {
             const actionCell = row.cells[11];
             const buttonGroup = document.createElement('div');
             buttonGroup.className = 'btn-group';
+
             const editButton = document.createElement('button');
             editButton.textContent = '수정/상세';
             editButton.className = 'btn btn-sm btn-primary';
             editButton.onclick = () => openReservationModal(res.id);
+
             const deleteButton = document.createElement('button');
             deleteButton.textContent = '삭제';
             deleteButton.className = 'btn btn-sm btn-danger';
@@ -81,11 +91,13 @@ document.addEventListener("DOMContentLoaded", async function() {
                     populateReservations(currentPage, currentFilters);
                 }
             };
+            
             buttonGroup.appendChild(editButton);
             buttonGroup.appendChild(deleteButton);
             actionCell.appendChild(buttonGroup);
             reservationListTable.appendChild(row);
         });
+
         currentPage = page;
         pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
         prevPageButton.disabled = !response.previous;
@@ -324,12 +336,15 @@ document.addEventListener("DOMContentLoaded", async function() {
         modalSaveButton.onclick = async () => {
             const form = document.getElementById('edit-reservation-form');
             const category = form.querySelector('#edit-reservation-category').value;
+            // [수정] 비어있는 날짜 값을 null로 변환하는 로직 추가
+            const startDateValue = form.querySelector('#edit-reservation-start_date').value;
+            const endDateValue = form.querySelector('#edit-reservation-end_date').value;
             const formData = {
                 tour_name: form.querySelector('#edit-reservation-tour_name').value,
                 customer_id: form.querySelector('#edit-reservation-customer_id').value,
                 reservation_date: form.querySelector('#edit-reservation-reservation_date').value,
-                start_date: form.querySelector('#edit-reservation-start_date').value,
-                end_date: form.querySelector('#edit-reservation-end_date').value,
+                start_date: startDateValue ? startDateValue : null,
+                end_date: endDateValue ? endDateValue : null,
                 total_price: form.querySelector('#edit-reservation-total_price').value.replace(/,/g, ''),
                 total_cost: form.querySelector('#edit-reservation-total_cost').value.replace(/,/g, ''),
                 payment_amount: form.querySelector('#edit-reservation-payment_amount').value.replace(/,/g, ''),
@@ -346,6 +361,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
         };
     }
+
+    // --- 3. 이벤트 리스너 설정 ---
 
     filterButton.addEventListener('click', () => {
         const filters = {
@@ -392,6 +409,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         newReservationModal.show();
     });
 
+    // --- 4. 페이지 초기화 ---
     async function initializePage() {
         await fetchAllCustomers();
         await populateReservations(1, {});
@@ -416,12 +434,15 @@ document.addEventListener("DOMContentLoaded", async function() {
             newReservationForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const category = newReservationForm.querySelector('#new-reservation-category').value;
+                // [수정] 비어있는 날짜 값을 null로 변환하는 로직 추가
+                const startDateValue = newReservationForm.querySelector('#new-reservation-start_date').value;
+                const endDateValue = newReservationForm.querySelector('#new-reservation-end_date').value;
                 const formData = {
                     tour_name: newReservationForm.querySelector('#new-reservation-tour_name').value,
                     customer_id: newReservationForm.querySelector('#new-reservation-customer_id').value,
                     reservation_date: newReservationForm.querySelector('#new-reservation-reservation_date').value,
-                    start_date: newReservationForm.querySelector('#new-reservation-start_date').value,
-                    end_date: newReservationForm.querySelector('#new-reservation-end_date').value,
+                    start_date: startDateValue ? startDateValue : null,
+                    end_date: endDateValue ? endDateValue : null,
                     total_price: newReservationForm.querySelector('#new-reservation-total_price').value.replace(/,/g, ''),
                     total_cost: newReservationForm.querySelector('#new-reservation-total_cost').value.replace(/,/g, ''),
                     payment_amount: newReservationForm.querySelector('#new-reservation-payment_amount').value.replace(/,/g, ''),
