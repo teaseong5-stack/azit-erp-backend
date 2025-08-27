@@ -14,9 +14,10 @@ urlpatterns = [
 
     # Reservation URLs
     path('reservations/', views.reservation_list),
-    path('reservations/all/', views.reservation_list_all), # [추가] 전체 데이터 조회 URL
+    path('reservations/all/', views.reservation_list_all),
     path('reservations/summary/', views.reservation_summary),
     path('reservations/bulk/', views.reservation_bulk_import),
+    path('reservations/bulk-delete/', views.reservation_bulk_delete), # [추가된 경로]
     path('reservations/<int:pk>/', views.reservation_detail),
 
     # Report & Partner URLs
@@ -29,4 +30,3 @@ urlpatterns = [
     path('transactions/<int:pk>/', views.transaction_detail),
     path('transactions/summary/', views.transaction_summary),
 ]
-
