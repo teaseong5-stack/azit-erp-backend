@@ -59,11 +59,12 @@
                 <h2 class="card-title">새 제휴업체 등록</h2>
                 <form id="partner-form" class="mb-3">
                     <div class="row g-3">
-                        <div class="col-md-6"><label for="partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="partner-name" required></div>
-                        <div class="col-md-6">
+                        <div class="col-md-7"><label for="partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="partner-name" required></div>
+                        <div class="col-md-7">
                             <label for="partner-category" class="form-label">업체 종류</label>
                             <select id="partner-category" class="form-select" required>
                                 <option value="HOTEL">숙박</option>
+								<option value="GOLF">골프</option>
                                 <option value="AIRLINE">항공사</option>
                                 <option value="RENTAL">렌터카</option>
                                 <option value="RESTAURANT">식당</option>
@@ -86,7 +87,7 @@
                     <div class="mb-3">
                         <label for="bulk-paste-area" class="form-label">
                             아래 순서에 맞춰 엑셀/시트 데이터를 복사하여 붙여넣으세요.<br>
-                            <small class="text-muted">순서: 업체명, 종류(HOTEL, AIRLINE 등), 담당자, 연락처, 이메일, 주소, 메모</small>
+                            <small class="text-muted">순서: 업체명, 종류(HOTEL, GOLF 등), 담당자, 연락처, 이메일, 주소, 메모</small>
                         </label>
                         <textarea class="form-control" id="bulk-paste-area" rows="5" placeholder="여기에 붙여넣기..."></textarea>
                     </div>
@@ -126,11 +127,12 @@
                 <div class="modal-body">
                     <form id="edit-partner-form">
                         <div class="row g-3">
-                            <div class="col-md-6"><label for="edit-partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="edit-partner-name" required></div>
-                            <div class="col-md-6">
+                            <div class="col-md-7"><label for="edit-partner-name" class="form-label">업체명</label><input type="text" class="form-control" id="edit-partner-name" required></div>
+                            <div class="col-md-7">
                                 <label for="edit-partner-category" class="form-label">업체 종류</label>
                                 <select id="edit-partner-category" class="form-select" required>
                                     <option value="HOTEL">호텔</option>
+									<option value="GOLF">골프</option>
                                     <option value="AIRLINE">항공사</option>
                                     <option value="RENTAL">렌터카</option>
                                     <option value="RESTAURANT">식당</option>

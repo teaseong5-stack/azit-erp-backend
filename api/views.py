@@ -211,6 +211,10 @@ def reservation_list(request):
 
     elif request.method == 'POST':
         data = request.data
+        # [수정] customer_id가 유효한지 먼저 확인하는 검증 로직을 추가합니다.
+        customer_id = data.get('customer_id')
+        if not customer_id:
+            return Response({"error": "고객을 선택해주세요."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             customer = Customer.objects.get(pk=data.get('customer_id'))
             reservation = Reservation.objects.create(
