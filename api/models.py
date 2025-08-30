@@ -9,7 +9,7 @@ class Customer(models.Model):
     def __str__(self): return self.name
 
 class Partner(models.Model):
-    CATEGORY_CHOICES = [('HOTEL', '호텔'), ('AIRLINE', '항공사'), ('RENTAL', '렌터카'), ('RESTAURANT', '식당'), ('AGENCY', '현지 에이전시'), ('OTHER', '기타')]
+    CATEGORY_CHOICES = [('HOTEL', '호텔'), ('GOLF', '골프'), ('AIRLINE', '항공사'), ('RENTAL', '렌터카'), ('RESTAURANT', '식당'), ('AGENCY', '현지 에이전시'), ('OTHER', '기타')]
     name = models.CharField("업체명", max_length=100)
     category = models.CharField("업체 종류", max_length=20, choices=CATEGORY_CHOICES)
     contact_person = models.CharField("담당자", max_length=50, blank=True)
