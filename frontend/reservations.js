@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             allCustomers = response.results;
         }
     }
-
+    
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
         const params = new URLSearchParams({ page, ...filters });
