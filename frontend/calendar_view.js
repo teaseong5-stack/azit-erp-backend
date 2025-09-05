@@ -79,8 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-            // [추가] 리소스 타임라인 뷰를 위한 설정
-            schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source', // 개발용 라이선스 키
+            // [수정] schedulerLicenseKey 옵션은 v6의 index.global.min.js에 포함되어 있으므로 제거합니다.
             initialView: 'resourceTimelineMonth', // 초기 뷰 설정
             headerToolbar: {
                 left: 'prev,next today',
