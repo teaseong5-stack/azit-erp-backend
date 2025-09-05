@@ -35,6 +35,8 @@ class ReservationSerializer(serializers.ModelSerializer):
     manager = UserSerializer(read_only=True, allow_null=True)
     customer_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
     manager_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
     class Meta:
         model = Reservation
         fields = '__all__'
