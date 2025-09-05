@@ -79,7 +79,6 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-            // [수정] schedulerLicenseKey 옵션은 v6의 index.global.min.js에 포함되어 있으므로 제거합니다.
             initialView: 'resourceTimelineMonth', // 초기 뷰 설정
             headerToolbar: {
                 left: 'prev,next today',
@@ -143,3 +142,4 @@ document.addEventListener("DOMContentLoaded", function() {
 
     initializePage();
 });
+
