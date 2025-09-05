@@ -1,7 +1,7 @@
 import csv
 from django.http import HttpResponse
 from django.db.models import Q, F, Sum, Value, DecimalField, Count
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncMonth
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -16,6 +16,7 @@ from .serializers import (
 )
 
 # --- 계정 등록 뷰 ---
+# ... 기존 코드 ...
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
@@ -26,6 +27,7 @@ def register_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # --- 사용자 정보 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_info(request):
@@ -33,6 +35,7 @@ def get_user_info(request):
     return Response(serializer.data)
 
 # --- 사용자 목록 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
 def user_list(request):
@@ -41,6 +44,7 @@ def user_list(request):
     return Response(serializer.data)
 
 # --- CSV 내보내기 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
@@ -60,6 +64,7 @@ def export_reservations_csv(request):
     return response
 
 # --- Customer 관련 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def customer_list(request):
@@ -85,6 +90,7 @@ def customer_list(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def customer_bulk_import(request):
+# ... 기존 코드 ...
     data = request.data
     if not isinstance(data, list):
         return Response({"error": "Input must be a list of customer objects."}, status=status.HTTP_400_BAD_REQUEST)
@@ -107,6 +113,7 @@ def customer_bulk_import(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def customer_detail(request, pk):
+# ... 기존 코드 ...
     try:
         customer = Customer.objects.get(pk=pk)
     except Customer.DoesNotExist:
@@ -125,6 +132,7 @@ def customer_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- Reservation 관련 뷰 ---
+# ... 기존 코드 ...
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reservation_bulk_delete(request):
@@ -138,6 +146,7 @@ def reservation_bulk_delete(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_list_all(request):
+# ... 기존 코드 ...
     queryset = Reservation.objects.select_related('customer', 'manager').all()
     serializer = ReservationSerializer(queryset.order_by('-reservation_date'), many=True)
     return Response({'results': serializer.data})
@@ -145,46 +154,78 @@ def reservation_list_all(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
-    queryset = Reservation.objects.select_related('manager').all()
+    # [수정] group_by 파라미터를 받아 동적으로 집계 로직을 변경하도록 수정
     
-    if request.user.is_superuser:
-        manager_id = request.query_params.get('manager', None)
-        if manager_id:
-            queryset = queryset.filter(manager_id=manager_id)
-            
-    category = request.query_params.get('category', None)
-    search = request.query_params.get('search', None)
-    start_date_gte = request.query_params.get('start_date__gte', None)
-    start_date_lte = request.query_params.get('start_date__lte', None)
-    if category:
-        queryset = queryset.filter(category=category)
-    if search:
-        queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
-    if start_date_gte:
-        queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
-    if start_date_lte:
-        queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
-    totals = queryset.aggregate(
-        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
-        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
-    )
-    totals['total_margin'] = totals['total_sales'] - totals['total_cost']
-    manager_counts = list(queryset.values('manager__username').annotate(count=Count('id')).order_by('-count'))
-    summary_data = {"totals": totals, "manager_counts": manager_counts}
+    # 기본 필터링: 취소되지 않고, 시작일이 있는 예약만 대상
+    queryset = Reservation.objects.filter(start_date__isnull=False).exclude(status='CANCELED')
+
+    year = request.query_params.get('year')
+    month = request.query_params.get('month')
+    
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+    if month:
+        queryset = queryset.filter(start_date__month=month)
+
+    group_by = request.query_params.get('group_by')
+    summary_data = {}
+
+    if group_by == 'month':
+        summary = queryset.annotate(month=TruncMonth('start_date')) \
+                          .values('month') \
+                          .annotate(total_sales=Sum('total_price')) \
+                          .order_by('month')
+        summary_data = [{'month': item['month'].strftime('%Y-%m'), 'sales': item['total_sales']} for item in summary]
+
+    elif group_by == 'category':
+        summary = queryset.values('category') \
+                          .annotate(total_sales=Sum('total_price')) \
+                          .order_by('-total_sales')
+        summary_data = [{'category': item['category'], 'sales': item['total_sales']} for item in summary]
+
+    elif group_by == 'manager':
+        summary = queryset.values('manager__username') \
+                          .annotate(total_sales=Sum('total_price'), count=Count('id')) \
+                          .order_by('-total_sales')
+        summary_data = [
+            {'manager': item['manager__username'] or '미지정', 'sales': item['total_sales'], 'count': item['count']} 
+            for item in summary
+        ]
+        
+    else: # reports.html에서 사용하는 기본 요약
+        totals = queryset.aggregate(
+            total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
+            total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
+        )
+        totals['total_margin'] = totals['total_sales'] - totals['total_cost']
+        manager_counts = list(queryset.values('manager__username').annotate(count=Count('id')).order_by('-count'))
+        summary_data = {"totals": totals, "manager_counts": manager_counts}
+
     return Response(summary_data)
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def reservation_list(request):
+# ... 기존 코드 ...
     if request.method == 'GET':
         base_queryset = Reservation.objects.select_related('customer', 'manager')
         queryset = base_queryset.all()
         
+        # 관리자 권한 필터
         if request.user.is_superuser:
             manager_id = request.query_params.get('manager', None)
             if manager_id:
                 queryset = queryset.filter(manager_id=manager_id)
 
+        # 기간 필터
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+        if year:
+            queryset = queryset.filter(start_date__year=year)
+        if month:
+            queryset = queryset.filter(start_date__month=month)
+            
         category = request.query_params.get('category', None)
         search = request.query_params.get('search', None)
         start_date_gte = request.query_params.get('start_date__gte', None)
@@ -211,7 +252,6 @@ def reservation_list(request):
 
     elif request.method == 'POST':
         data = request.data
-        # [수정] customer_id가 유효한지 먼저 확인하는 검증 로직을 추가합니다.
         customer_id = data.get('customer_id')
         if not customer_id:
             return Response({"error": "고객을 선택해주세요."}, status=status.HTTP_400_BAD_REQUEST)
@@ -243,6 +283,7 @@ def reservation_list(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reservation_bulk_import(request):
+# ... 기존 코드 ...
     data = request.data
     if not isinstance(data, list):
         return Response({"error": "입력값은 반드시 리스트 형태여야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -324,6 +365,7 @@ def reservation_bulk_import(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def reservation_detail(request, pk):
+# ... 기존 코드 ...
     try:
         reservation = Reservation.objects.get(pk=pk)
     except Reservation.DoesNotExist:
@@ -342,6 +384,7 @@ def reservation_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- Partner 관련 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def partner_list(request):
@@ -359,6 +402,7 @@ def partner_list(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAdminUser])
 def partner_detail(request, pk):
+# ... 기존 코드 ...
     try:
         partner = Partner.objects.get(pk=pk)
     except Partner.DoesNotExist:
@@ -377,6 +421,7 @@ def partner_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- Transaction 관련 뷰 ---
+# ... 기존 코드 ...
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
@@ -402,6 +447,7 @@ def transaction_summary(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
+# ... 기존 코드 ...
     if request.method == 'GET':
         base_queryset = Transaction.objects.select_related('reservation__customer', 'partner', 'manager')
         queryset = base_queryset.all()
@@ -434,6 +480,7 @@ def transaction_list(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAdminUser])
 def transaction_detail(request, pk):
+# ... 기존 코드 ...
     try:
         transaction = Transaction.objects.get(pk=pk)
     except Transaction.DoesNotExist:
