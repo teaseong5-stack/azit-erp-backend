@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // category_sales.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
     if (!document.getElementById('categoryPieChart')) return;
 
+    // --- 1. HTML 요소 선언 ---
     const categoryPieChartCanvas = document.getElementById('categoryPieChart');
     const categorySalesTable = document.getElementById('category-sales-table');
     const yearSelect = document.getElementById('filter-year');
@@ -11,7 +13,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const detailModalBody = document.getElementById('detailModalBody');
 
     let categoryPieChart = null;
-    let allReservations = []; // 전체 예약을 저장할 변수
 
     const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
     const categoryColors = {
@@ -21,107 +22,105 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     /**
-     * 년/월 필터 옵션을 채우는 함수
+     * 년/월 필터 드롭다운을 초기화하는 함수
      */
     function populateFilters() {
         const currentYear = new Date().getFullYear();
-        yearSelect.innerHTML = '<option value="">전체</option>';
+        yearSelect.innerHTML = '<option value="">전체 년도</option>';
         for (let i = 0; i < 5; i++) {
             const year = currentYear - i;
             yearSelect.innerHTML += `<option value="${year}">${year}년</option>`;
         }
-        monthSelect.innerHTML = '<option value="">전체</option>';
+        monthSelect.innerHTML = '<option value="">전체 월</option>';
         for (let i = 1; i <= 12; i++) {
             monthSelect.innerHTML += `<option value="${i}">${i}월</option>`;
         }
     }
 
     /**
-     * 필터링된 예약 데이터로 차트와 테이블을 업데이트하는 함수
+     * 서버에서 카테고리별 요약 데이터를 가져와 차트와 테이블을 업데이트하는 함수
+     * @param {string} year - 조회할 년도
+     * @param {string} month - 조회할 월
      */
-    function updateDashboard(reservations) {
-        const categorySales = {};
-        const activeReservations = reservations.filter(res => res.status !== 'CANCELED');
+    async function updateDashboard(year, month) {
+        const params = new URLSearchParams({ group_by: 'category' });
+        if (year) params.append('year', year);
+        if (month) params.append('month', month);
+
+        const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
         
-        activeReservations.forEach(res => {
-            categorySales[res.category] = (categorySales[res.category] || 0) + Number(res.total_price);
-        });
+        // 데이터가 없을 경우 처리
+        if (!summaryData || summaryData.length === 0) {
+            categorySalesTable.innerHTML = '<tr><td colspan="2" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
+            if (categoryPieChart) {
+                categoryPieChart.destroy();
+                categoryPieChart = null;
+            }
+            return;
+        }
+        
+        const labels = summaryData.map(item => categoryLabels[item.category] || item.category);
+        const data = summaryData.map(item => item.sales);
+        const backgroundColors = summaryData.map(item => categoryColors[item.category] || '#6c757d');
 
         // 차트 렌더링
         if (categoryPieChart) categoryPieChart.destroy();
         categoryPieChart = new Chart(categoryPieChartCanvas.getContext('2d'), {
             type: 'pie',
             data: {
-                labels: Object.keys(categorySales).map(key => categoryLabels[key] || key),
-                datasets: [{
-                    data: Object.values(categorySales),
-                    backgroundColor: Object.keys(categorySales).map(key => categoryColors[key] || '#6c757d')
-                }]
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: backgroundColors }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
 
         // 테이블 렌더링
         categorySalesTable.innerHTML = '';
-        const sortedCategories = Object.entries(categorySales).sort((a, b) => b[1] - a[1]);
-
-        for (const [category, sales] of sortedCategories) {
+        summaryData.forEach(item => {
             const row = categorySalesTable.insertRow();
             row.innerHTML = `
-                <td><a href="#" class="category-detail-link" data-category="${category}">${categoryLabels[category] || category}</a></td>
-                <td>${sales.toLocaleString()} VND</td>
+                <td><a href="#" class="category-detail-link" data-category="${item.category}">${categoryLabels[item.category] || item.category}</a></td>
+                <td>${Number(item.sales).toLocaleString()} VND</td>
             `;
-        }
+        });
     }
 
     /**
-     * 카테고리 클릭 시 상품별 상세 팝업을 표시하는 함수
+     * 특정 카테고리의 상품별 매출 상세 내역을 팝업으로 보여주는 함수
+     * @param {string} category - 상세 조회할 카테고리
+     * @param {string} year - 현재 필터링된 년도
+     * @param {string} month - 현재 필터링된 월
      */
-    function showProductDetails(category, year, month) {
+    async function showProductDetails(category, year, month) {
         detailModalTitle.textContent = `${categoryLabels[category] || category} 상품별 매출 현황`;
-        
-        let filteredReservations = allReservations;
-        if (year) {
-            filteredReservations = filteredReservations.filter(r => r.start_date && r.start_date.startsWith(year));
-        }
-        if (month) {
-            const monthStr = month.toString().padStart(2, '0');
-            filteredReservations = filteredReservations.filter(r => r.start_date && r.start_date.substring(5, 7) === monthStr);
-        }
+        detailModalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        detailModal.show();
 
-        const productSales = {};
-        filteredReservations
-            .filter(r => r.status !== 'CANCELED' && r.category === category)
-            .forEach(r => {
-                productSales[r.tour_name] = (productSales[r.tour_name] || 0) + Number(r.total_price);
+        const params = new URLSearchParams({ category: category, group_by: 'product' });
+        if (year) params.append('year', year);
+        if (month) params.append('month', month);
+
+        const productData = await window.apiFetch(`reservations/summary?${params.toString()}`);
+        
+        let tableHtml = '<table class="table table-striped"><thead><tr><th>상품명</th><th>매출액 (VND)</th><th>건수</th></tr></thead><tbody>';
+        
+        if (productData && productData.length > 0) {
+            productData.forEach(item => {
+                tableHtml += `<tr><td>${item.product}</td><td>${Number(item.sales).toLocaleString()}</td><td>${item.count}</td></tr>`;
             });
-
-        let tableHtml = '<table class="table"><thead><tr><th>상품명</th><th>매출액 (VND)</th></tr></thead><tbody>';
-        const sortedProducts = Object.entries(productSales).sort((a, b) => b[1] - a[1]);
-        
-        for (const [product, sales] of sortedProducts) {
-            tableHtml += `<tr><td>${product}</td><td>${sales.toLocaleString()}</td></tr>`;
+        } else {
+            tableHtml += '<tr><td colspan="3" class="text-center">데이터가 없습니다.</td></tr>';
         }
         tableHtml += '</tbody></table>';
         detailModalBody.innerHTML = tableHtml;
-        detailModal.show();
     }
     
-    // 이벤트 리스너 설정
+    // '조회' 버튼 이벤트 리스너
     filterButton.addEventListener('click', () => {
-        const year = yearSelect.value;
-        const month = monthSelect.value;
-        let filtered = allReservations;
-        if (year) {
-            filtered = filtered.filter(r => r.start_date && r.start_date.startsWith(year));
-        }
-        if (month) {
-            const monthStr = month.toString().padStart(2, '0');
-            filtered = filtered.filter(r => r.start_date && r.start_date.substring(5, 7) === monthStr);
-        }
-        updateDashboard(filtered);
+        updateDashboard(yearSelect.value, monthSelect.value);
     });
 
+    // 테이블의 카테고리명 클릭 이벤트 리스너 (이벤트 위임)
     categorySalesTable.addEventListener('click', function(event) {
         if (event.target.classList.contains('category-detail-link')) {
             event.preventDefault();
@@ -130,14 +129,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 페이지 초기화
+    /**
+     * 페이지 초기화 함수
+     */
     async function initializePage() {
         populateFilters();
-        const response = await window.apiFetch('reservations/all/');
-        if (response && response.results) {
-            allReservations = response.results;
-            updateDashboard(allReservations);
-        }
+        await updateDashboard(); // 초기에는 전체 기간 데이터로 대시보드 표시
     }
 
     initializePage();

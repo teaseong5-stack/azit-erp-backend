@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     let totalPages = 1;
     let currentFilters = {};
     let allCustomers = [];
-    let allUsers = []; // [추가] 모든 사용자(담당자) 목록을 저장할 배열
+    let allUsers = []; 
 
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
 
@@ -288,6 +288,22 @@ document.addEventListener("DOMContentLoaded", async function() {
         };
         const currentLabels = labels[category] || labels.DEFAULT;
 
+        // [수정] 새 예약 등록 시 일반 사용자는 담당자가 자신으로 고정되도록 수정
+        let managerFieldHtml = '';
+        if (prefix === 'edit-reservation') {
+             managerFieldHtml = user.is_superuser ? `
+                <div class="col-md-6"><label for="${prefix}-manager" class="form-label fw-bold">담당자</label><select class="form-select" id="${prefix}-manager"></select></div>
+                ` : `
+                <div class="col-md-6"><label class="form-label fw-bold">담당자</label><input type="text" class="form-control" value="${data.manager ? data.manager.username : '미지정'}" disabled></div>
+                `;
+        } else { // 새 예약 등록 ('new-reservation')
+            managerFieldHtml = user.is_superuser ? `
+                <div class="col-md-6"><label for="${prefix}-manager" class="form-label fw-bold">담당자</label><select class="form-select" id="${prefix}-manager"></select></div>
+                ` : `
+                <div class="col-md-6"><label class="form-label fw-bold">담당자</label><input type="text" class="form-control" value="${user.username}" disabled></div>
+                `;
+        }
+
         return `
             <form id="${prefix}-form">
                 <div class="row g-3">
@@ -316,12 +332,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                     <div class="row g-3 mt-1">
                         <div class="col-md-6"><label for="${prefix}-status" class="form-label fw-bold">예약 상태</label><select class="form-select" id="${prefix}-status"></select></div>
-                        <!-- [수정] 현재 사용자가 관리자일 경우 담당자 변경 드롭다운 표시, 아니면 이름만 표시 -->
-                        ${user.is_superuser ? `
-                        <div class="col-md-6"><label for="${prefix}-manager" class="form-label fw-bold">담당자</label><select class="form-select" id="${prefix}-manager"></select></div>
-                        ` : `
-                        <div class="col-md-6"><label class="form-label fw-bold">담당자</label><input type="text" class="form-control" value="${data.manager ? data.manager.username : '미지정'}" disabled></div>
-                        `}
+                        ${managerFieldHtml}
                     </div>
                     <div class="col-12 mt-3"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="col-12"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
@@ -333,9 +344,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     
     // --- 3. 핵심 로직 함수 ---
 
-    /**
-     * 서버에서 모든 고객 목록을 가져와 전역 변수에 저장합니다.
-     */
     async function fetchAllCustomers() {
         const response = await window.apiFetch('customers?page_size=10000');
         if (response && response.results) {
@@ -343,9 +351,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * [추가] 서버에서 모든 사용자(담당자) 목록을 가져와 전역 변수에 저장합니다.
-     */
     async function fetchAllUsers() {
         if (user && user.is_superuser) {
             const response = await window.apiFetch('users');
@@ -355,10 +360,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-
-    /**
-     * 서버에서 예약 목록을 가져와 테이블에 렌더링합니다.
-     */
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
         const params = new URLSearchParams({ page, ...filters });
@@ -424,9 +425,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         if(selectAllCheckbox) selectAllCheckbox.checked = false;
     }
 
-    /**
-     * 예약 수정/상세 모달을 열고 데이터를 채웁니다.
-     */
     async function openReservationModal(reservationId) {
         const data = await window.apiFetch(`reservations/${reservationId}`);
         if (!data) return;
@@ -449,10 +447,9 @@ document.addEventListener("DOMContentLoaded", async function() {
             statusSelect.innerHTML += `<option value="${key}" ${data.status === key ? 'selected' : ''}>${value}</option>`;
         });
         
-        // [추가] 관리자일 경우 담당자 드롭다운을 채웁니다.
         if (user.is_superuser) {
             const managerSelect = document.getElementById('edit-reservation-manager');
-            managerSelect.innerHTML = '<option value="">-- 담당자 변경 --</option>'; // 변경하지 않을 경우를 위한 옵션
+            managerSelect.innerHTML = '<option value="">-- 담당자 변경안함 --</option>'; 
             allUsers.forEach(u => {
                 const isSelected = data.manager && data.manager.id === u.id;
                 managerSelect.innerHTML += `<option value="${u.id}" ${isSelected ? 'selected' : ''}>${u.username}</option>`;
@@ -482,7 +479,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 details: getDetailsFromForm('edit-reservation', category)
             };
 
-            // [추가] 관리자인 경우, 선택된 담당자 ID를 전송 데이터에 추가합니다.
             if (user.is_superuser) {
                 const managerSelect = form.querySelector('#edit-reservation-manager');
                 if (managerSelect && managerSelect.value) {
@@ -568,7 +564,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 5. 페이지 초기화 실행 ---
 
     async function initializePage() {
-        // [수정] 고객과 사용자 목록을 병렬로 불러옵니다.
         await Promise.all([fetchAllCustomers(), fetchAllUsers()]);
         
         newReservationFormContainer.innerHTML = renderFormFields('new-reservation');
@@ -576,7 +571,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         
         const newCategorySelect = document.getElementById('new-reservation-category');
         const newStatusSelect = document.getElementById('new-reservation-status');
-
+        
         const categories = {TOUR:"투어", RENTAL_CAR:"렌터카", ACCOMMODATION:"숙박", GOLF:"골프", TICKET:"티켓", OTHER:"기타"};
         Object.entries(categories).forEach(([key, value]) => {
             newCategorySelect.innerHTML += `<option value="${key}">${value}</option>`;
@@ -586,6 +581,16 @@ document.addEventListener("DOMContentLoaded", async function() {
         Object.entries(statuses).forEach(([key, value]) => {
             newStatusSelect.innerHTML += `<option value="${key}">${value}</option>`;
         });
+
+        // [추가] 새 예약 모달의 담당자 드롭다운을 채웁니다.
+        if (user.is_superuser) {
+            const newManagerSelect = document.getElementById('new-reservation-manager');
+            allUsers.forEach(u => {
+                // 현재 로그인한 사용자를 기본값으로 선택
+                const isSelected = user.id === u.id;
+                newManagerSelect.innerHTML += `<option value="${u.id}" ${isSelected ? 'selected' : ''}>${u.username}</option>`;
+            });
+        }
         
         newCategorySelect.addEventListener('change', () => handleCategoryChange('new-reservation'));
         handleCategoryChange('new-reservation');
@@ -612,6 +617,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                     notes: newReservationForm.querySelector('#new-reservation-notes').value,
                     details: getDetailsFromForm('new-reservation', category)
                 };
+
+                // [추가] 관리자가 새 예약 생성 시 선택한 담당자 ID를 전송합니다.
+                if (user.is_superuser) {
+                    formData.manager_id = newReservationForm.querySelector('#new-reservation-manager').value;
+                }
+                
                 const response = await window.apiFetch('reservations', { method: 'POST', body: JSON.stringify(formData) });
                 if (response) {
                     newReservationModalEl.hide();
@@ -634,4 +645,3 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     initializePage();
 });
-
