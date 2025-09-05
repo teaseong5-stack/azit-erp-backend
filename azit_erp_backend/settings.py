@@ -147,6 +147,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS (Cross-Origin Resource Sharing) 설정
 CORS_ALLOWED_ORIGINS = [
     "https://azit-erp-frontend.onrender.com",
+    "http://localhost:8000",  # [추가] 로컬 개발 환경 허용
+    "http://127.0.0.1:8000", # [추가] 로컬 개발 환경 허용
 ]
 
 # CSRF (Cross-Site Request Forgery) 보호 설정

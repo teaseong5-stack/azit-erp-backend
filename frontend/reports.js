@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     async function fetchSummaryData(filters = {}) {
         const params = new URLSearchParams(filters);
-        const endpoint = `reservations/summary?${params.toString()}`;
+        const endpoint = `reports/summary?${params.toString()}`;
         const summaryData = await window.apiFetch(endpoint);
 
         if (summaryData) {
