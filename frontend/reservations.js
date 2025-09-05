@@ -50,13 +50,33 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
 
     /**
+     * [개선] 예약 상태에 따라 다른 Bootstrap 배지 색상을 반환하는 함수
+     * @param {string} status - 예약 상태 (e.g., 'PENDING', 'CONFIRMED')
+     * @returns {string} - Bootstrap 배경색 클래스 이름
+     */
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'COMPLETED':
+                return 'bg-success';
+            case 'CONFIRMED':
+            case 'PAID':
+                return 'bg-primary';
+            case 'PENDING':
+                return 'bg-warning text-dark';
+            case 'CANCELED':
+                return 'bg-danger';
+            default:
+                return 'bg-secondary';
+        }
+    }
+
+
+    /**
      * 페이지네이션 UI를 동적으로 생성하고 렌더링합니다.
-     * @param {number} currentPage - 현재 페이지 번호
-     * @param {number} totalPages - 전체 페이지 수
      */
     function renderPagination(currentPage, totalPages) {
         paginationContainers.forEach(container => {
-            container.innerHTML = ''; // 기존 페이지 번호 삭제
+            container.innerHTML = ''; 
 
             const pageWindow = 2;
             let startPage = Math.max(1, currentPage - pageWindow);
@@ -288,7 +308,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         };
         const currentLabels = labels[category] || labels.DEFAULT;
 
-        // [수정] 새 예약 등록 시 일반 사용자는 담당자가 자신으로 고정되도록 수정
         let managerFieldHtml = '';
         if (prefix === 'edit-reservation') {
              managerFieldHtml = user.is_superuser ? `
@@ -385,6 +404,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             const row = document.createElement('tr');
             const margin = (res.total_price || 0) - (res.total_cost || 0);
 
+            // [수정] res.status_display 와 res.category_display 를 사용하여 한글 값 표시
             row.innerHTML = `
                 <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
@@ -395,7 +415,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${Number(res.total_cost).toLocaleString()} VND</td>
                 <td>${Number(res.total_price).toLocaleString()} VND</td>
                 <td class="${margin >= 0 ? 'text-primary' : 'text-danger'} fw-bold">${margin.toLocaleString()} VND</td>
-                <td><span class="badge bg-primary">${res.status_display || res.status}</span></td>
+                <td><span class="badge ${getStatusBadgeClass(res.status)}">${res.status_display || res.status}</span></td>
                 <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>
             `;
@@ -582,11 +602,9 @@ document.addEventListener("DOMContentLoaded", async function() {
             newStatusSelect.innerHTML += `<option value="${key}">${value}</option>`;
         });
 
-        // [추가] 새 예약 모달의 담당자 드롭다운을 채웁니다.
         if (user.is_superuser) {
             const newManagerSelect = document.getElementById('new-reservation-manager');
             allUsers.forEach(u => {
-                // 현재 로그인한 사용자를 기본값으로 선택
                 const isSelected = user.id === u.id;
                 newManagerSelect.innerHTML += `<option value="${u.id}" ${isSelected ? 'selected' : ''}>${u.username}</option>`;
             });
@@ -618,9 +636,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                     details: getDetailsFromForm('new-reservation', category)
                 };
 
-                // [추가] 관리자가 새 예약 생성 시 선택한 담당자 ID를 전송합니다.
                 if (user.is_superuser) {
-                    formData.manager_id = newReservationForm.querySelector('#new-reservation-manager').value;
+                    const managerSelect = newReservationForm.querySelector('#new-reservation-manager');
+                    if (managerSelect && managerSelect.value) {
+                         formData.manager_id = managerSelect.value;
+                    }
                 }
                 
                 const response = await window.apiFetch('reservations', { method: 'POST', body: JSON.stringify(formData) });
