@@ -58,6 +58,11 @@ document.addEventListener("DOMContentLoaded", async function() {
      */
     async function updateCategorySummary(filters = {}) {
         const params = new URLSearchParams({ group_by: 'category', ...filters });
+        // start_date 필터가 있을 경우 year, month 파라미터를 사용하지 않도록 수정 (백엔드 로직에 따름)
+        if (filters.start_date__gte) {
+            params.delete('year');
+            params.delete('month');
+        }
         const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
         
         categorySummaryCards.innerHTML = ''; // 기존 카드 초기화
@@ -430,6 +435,16 @@ document.addEventListener("DOMContentLoaded", async function() {
             const row = document.createElement('tr');
             const margin = (res.total_price || 0) - (res.total_cost || 0);
 
+            // 상태에 따른 배지 색상 결정
+            const statusColors = {
+                'PENDING': 'secondary',
+                'CONFIRMED': 'primary',
+                'PAID': 'success',
+                'COMPLETED': 'dark',
+                'CANCELED': 'danger'
+            };
+            const statusColor = statusColors[res.status] || 'light';
+
             row.innerHTML = `
                 <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
@@ -440,7 +455,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${Number(res.total_cost).toLocaleString()} VND</td>
                 <td>${Number(res.total_price).toLocaleString()} VND</td>
                 <td class="${margin >= 0 ? 'text-primary' : 'text-danger'} fw-bold">${margin.toLocaleString()} VND</td>
-                <td><span class="badge bg-primary">${res.status_display || res.status}</span></td>
+                <td><span class="badge bg-${statusColor}">${res.status_display || res.status}</span></td>
                 <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>
             `;
