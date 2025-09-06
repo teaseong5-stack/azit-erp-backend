@@ -16,12 +16,13 @@ urlpatterns = [
     path('reservations/', views.reservation_list),
     path('reservations/all/', views.reservation_list_all),
     path('reservations/summary/', views.reservation_summary),
-    path('reservations/bulk/', views.reservation_bulk_import), # 중복된 경로 하나를 삭제
+    path('reservations/bulk/', views.reservation_bulk_import),
     path('reservations/bulk-delete/', views.reservation_bulk_delete),
     path('reservations/<int:pk>/', views.reservation_detail),
 
     # Report & Partner URLs
-    path('export-csv/', views.export_reservations_csv),
+    path('reports/summary/', views.report_summary), # [추가] 리포트 요약 API 경로
+    path('export-reservations-csv/', views.export_reservations_csv),
     path('partners/', views.partner_list),
     path('partners/<int:pk>/', views.partner_detail),
 

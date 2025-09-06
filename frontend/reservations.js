@@ -3,9 +3,9 @@
  * 아지트 ERP의 '예약 관리' 페이지에 대한 모든 동적 기능 및 API 연동을 처리합니다.
  *
  * 주요 기능:
- * - 예약 목록 조회, 필터링, 검색
+ * - 예약 목록 조회, 필터링, 검색 및 상단 요약 현황판
  * - 숫자 기반 페이지네이션 및 이전/다음 버튼
- * - 모달을 통한 예약 생성 및 수정
+ * - 모달을 통한 예약 생성 및 수정 (관리자 권한에 따른 담당자 변경 기능 포함)
  * - 선택된 카테고리에 따라 동적으로 변경되는 상세 정보 폼
  * - 고객 검색 기능이 포함된 드롭다운
  * - 선택 예약 일괄 삭제 및 전체 데이터 CSV 내보내기
@@ -31,6 +31,9 @@ document.addEventListener("DOMContentLoaded", async function() {
     const filterButton = document.getElementById('filter-button');
     const exportCsvButton = document.getElementById('export-csv-button');
     
+    // 현황판 요소
+    const categorySummaryCards = document.getElementById('category-summary-cards');
+    
     // 페이지네이션 요소
     const prevPageButtons = document.querySelectorAll('#prev-page-button');
     const nextPageButtons = document.querySelectorAll('#next-page-button');
@@ -50,26 +53,49 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
 
     /**
-     * [개선] 예약 상태에 따라 다른 Bootstrap 배지 색상을 반환하는 함수
-     * @param {string} status - 예약 상태 (e.g., 'PENDING', 'CONFIRMED')
-     * @returns {string} - Bootstrap 배경색 클래스 이름
+     * 카테고리별 매출 요약 현황판을 업데이트하는 함수
+     * @param {object} filters - 적용할 필터 조건
      */
-    function getStatusBadgeClass(status) {
-        switch (status) {
-            case 'COMPLETED':
-                return 'bg-success';
-            case 'CONFIRMED':
-            case 'PAID':
-                return 'bg-primary';
-            case 'PENDING':
-                return 'bg-warning text-dark';
-            case 'CANCELED':
-                return 'bg-danger';
-            default:
-                return 'bg-secondary';
+    async function updateCategorySummary(filters = {}) {
+        const params = new URLSearchParams({ group_by: 'category', ...filters });
+        const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
+        
+        categorySummaryCards.innerHTML = ''; // 기존 카드 초기화
+        
+        if (!summaryData) {
+            categorySummaryCards.innerHTML = '<div class="col"><p class="text-muted text-center">요약 정보를 불러오는데 실패했습니다.</p></div>';
+            return;
         }
-    }
 
+        const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
+        const salesMap = new Map(summaryData.map(item => [item.category, item.sales]));
+        let totalSales = 0;
+
+        Object.entries(categoryLabels).forEach(([key, label]) => {
+            const sales = salesMap.get(key) || 0;
+            totalSales += sales;
+            const cardHtml = `
+                <div class="col">
+                    <div class="card card-body text-center h-100">
+                        <h6 class="card-subtitle mb-2 text-muted">${label}</h6>
+                        <p class="card-text fs-5 fw-bold">${sales.toLocaleString()} VND</p>
+                    </div>
+                </div>
+            `;
+            categorySummaryCards.innerHTML += cardHtml;
+        });
+
+        // 총 합계 카드 추가
+        const totalCardHtml = `
+            <div class="col">
+                <div class="card card-body text-center h-100 bg-dark text-white">
+                    <h6 class="card-subtitle mb-2 text-white-50">총 합계</h6>
+                    <p class="card-text fs-5 fw-bold">${totalSales.toLocaleString()} VND</p>
+                </div>
+            </div>
+        `;
+        categorySummaryCards.innerHTML += totalCardHtml;
+    }
 
     /**
      * 페이지네이션 UI를 동적으로 생성하고 렌더링합니다.
@@ -315,7 +341,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 ` : `
                 <div class="col-md-6"><label class="form-label fw-bold">담당자</label><input type="text" class="form-control" value="${data.manager ? data.manager.username : '미지정'}" disabled></div>
                 `;
-        } else { // 새 예약 등록 ('new-reservation')
+        } else { // 'new-reservation'
             managerFieldHtml = user.is_superuser ? `
                 <div class="col-md-6"><label for="${prefix}-manager" class="form-label fw-bold">담당자</label><select class="form-select" id="${prefix}-manager"></select></div>
                 ` : `
@@ -404,7 +430,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             const row = document.createElement('tr');
             const margin = (res.total_price || 0) - (res.total_cost || 0);
 
-            // [수정] res.status_display 와 res.category_display 를 사용하여 한글 값 표시
             row.innerHTML = `
                 <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                 <td>${res.customer ? res.customer.name : 'N/A'}</td>
@@ -415,7 +440,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <td>${Number(res.total_cost).toLocaleString()} VND</td>
                 <td>${Number(res.total_price).toLocaleString()} VND</td>
                 <td class="${margin >= 0 ? 'text-primary' : 'text-danger'} fw-bold">${margin.toLocaleString()} VND</td>
-                <td><span class="badge ${getStatusBadgeClass(res.status)}">${res.status_display || res.status}</span></td>
+                <td><span class="badge bg-primary">${res.status_display || res.status}</span></td>
                 <td>${res.manager ? res.manager.username : 'N/A'}</td>
                 <td></td>
             `;
@@ -530,6 +555,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             if (!filters[key]) delete filters[key];
         }
         populateReservations(1, filters);
+        updateCategorySummary(filters);
     });
 
     paginationContainers.forEach(container => {
@@ -584,14 +610,14 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 5. 페이지 초기화 실행 ---
 
     async function initializePage() {
-        await Promise.all([fetchAllCustomers(), fetchAllUsers()]);
+        await Promise.all([fetchAllCustomers(), fetchAllUsers(), updateCategorySummary()]);
         
         newReservationFormContainer.innerHTML = renderFormFields('new-reservation');
         initializeSearchableCustomerDropdown('new-reservation');
         
         const newCategorySelect = document.getElementById('new-reservation-category');
         const newStatusSelect = document.getElementById('new-reservation-status');
-        
+
         const categories = {TOUR:"투어", RENTAL_CAR:"렌터카", ACCOMMODATION:"숙박", GOLF:"골프", TICKET:"티켓", OTHER:"기타"};
         Object.entries(categories).forEach(([key, value]) => {
             newCategorySelect.innerHTML += `<option value="${key}">${value}</option>`;
@@ -601,7 +627,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         Object.entries(statuses).forEach(([key, value]) => {
             newStatusSelect.innerHTML += `<option value="${key}">${value}</option>`;
         });
-
+        
         if (user.is_superuser) {
             const newManagerSelect = document.getElementById('new-reservation-manager');
             allUsers.forEach(u => {
@@ -635,12 +661,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                     notes: newReservationForm.querySelector('#new-reservation-notes').value,
                     details: getDetailsFromForm('new-reservation', category)
                 };
-
+                
                 if (user.is_superuser) {
-                    const managerSelect = newReservationForm.querySelector('#new-reservation-manager');
-                    if (managerSelect && managerSelect.value) {
-                         formData.manager_id = managerSelect.value;
-                    }
+                    formData.manager_id = newReservationForm.querySelector('#new-reservation-manager').value;
                 }
                 
                 const response = await window.apiFetch('reservations', { method: 'POST', body: JSON.stringify(formData) });
@@ -651,6 +674,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     newCategorySelect.value = 'TOUR';
                     handleCategoryChange('new-reservation');
                     populateReservations(1, {});
+                    updateCategorySummary({}); // 현황판도 새로고침
                 }
             });
         }
