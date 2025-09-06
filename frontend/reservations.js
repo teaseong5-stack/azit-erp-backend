@@ -435,13 +435,9 @@ document.addEventListener("DOMContentLoaded", async function() {
             const row = document.createElement('tr');
             const margin = (res.total_price || 0) - (res.total_cost || 0);
 
-            // 상태에 따른 배지 색상 결정
             const statusColors = {
-                'PENDING': 'secondary',
-                'CONFIRMED': 'primary',
-                'PAID': 'success',
-                'COMPLETED': 'dark',
-                'CANCELED': 'danger'
+                'PENDING': 'secondary', 'CONFIRMED': 'primary', 'PAID': 'success',
+                'COMPLETED': 'dark', 'CANCELED': 'danger'
             };
             const statusColor = statusColors[res.status] || 'light';
 

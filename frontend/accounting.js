@@ -6,6 +6,21 @@ document.addEventListener("DOMContentLoaded", async function() {
     const user = await window.apiFetch('user-info');
     const transactionListTable = document.getElementById('transaction-list-table');
     
+    // 현황판 요소
+    const totalIncomeEl = document.getElementById('total-income');
+    const totalExpenseEl = document.getElementById('total-expense');
+    const balanceEl = document.getElementById('balance');
+    const incomeCardEl = document.getElementById('income-card');
+    const incomeCashEl = document.getElementById('income-cash');
+    const incomeTransferEl = document.getElementById('income-transfer');
+    const expenseCardEl = document.getElementById('expense-card');
+    const expenseCashEl = document.getElementById('expense-cash');
+    const expenseTransferEl = document.getElementById('expense-transfer');
+    const summaryYearSelect = document.getElementById('summary-year-select');
+    const summaryMonthSelect = document.getElementById('summary-month-select');
+    const summaryFilterButton = document.getElementById('summary-filter-button');
+    const summaryResetButton = document.getElementById('summary-reset-button');
+    
     // 새 거래 등록 모달 관련
     const newTransactionModal = new bootstrap.Modal(document.getElementById('newTransactionModal'));
     const showNewTransactionModalButton = document.getElementById('show-new-transaction-modal');
@@ -23,7 +38,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
-    const filterResetButton = document.getElementById('filter-reset-button');
 
     // 수정 모달 요소
     const editModal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
@@ -40,6 +54,41 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentFilters = {};
 
     // --- 2. 데이터 로딩 및 화면 구성 함수 ---
+
+    async function updateSummaryCards(year = null, month = null) {
+        let endpoint = 'transactions/summary';
+        const params = new URLSearchParams();
+        if (year) params.append('year', year);
+        if (month) params.append('month', month);
+        const queryString = params.toString();
+        if (queryString) endpoint += `?${queryString}`;
+        
+        const summary = await window.apiFetch(endpoint);
+        if (summary) {
+            totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
+            totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
+            balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
+            incomeCardEl.textContent = `${Number(summary.income_card).toLocaleString()}`;
+            incomeCashEl.textContent = `${Number(summary.income_cash).toLocaleString()}`;
+            incomeTransferEl.textContent = `${Number(summary.income_transfer).toLocaleString()}`;
+            expenseCardEl.textContent = `${Number(summary.expense_card).toLocaleString()}`;
+            expenseCashEl.textContent = `${Number(summary.expense_cash).toLocaleString()}`;
+            expenseTransferEl.textContent = `${Number(summary.expense_transfer).toLocaleString()}`;
+        }
+    }
+
+    function populateYearMonthDropdowns() {
+        const currentYear = new Date().getFullYear();
+        summaryYearSelect.innerHTML = '<option value="">전체</option>';
+        for (let i = 0; i < 5; i++) {
+            const year = currentYear - i;
+            summaryYearSelect.innerHTML += `<option value="${year}">${year}년</option>`;
+        }
+        summaryMonthSelect.innerHTML = '<option value="">전체</option>';
+        for (let i = 1; i <= 12; i++) {
+            summaryMonthSelect.innerHTML += `<option value="${i}">${i}월</option>`;
+        }
+    }
 
     async function populateSelectOptions() {
         const [reservationsResponse, partners] = await Promise.all([
@@ -80,11 +129,13 @@ document.addEventListener("DOMContentLoaded", async function() {
         let params = new URLSearchParams({ page, ...filters });
         const queryString = params.toString();
         const response = await window.apiFetch(`transactions?${queryString}`);
+        
         transactionListTable.innerHTML = '';
-        if (!response || !response.results) {
+        if (!response || !response.results || response.results.length === 0) {
             pageInfo.textContent = '데이터가 없습니다.';
             prevPageButton.disabled = true;
             nextPageButton.disabled = true;
+            transactionListTable.innerHTML = '<tr><td colspan="7" class="text-center py-5">표시할 거래 데이터가 없습니다.</td></tr>';
             return;
         }
         const transactions = response.results;
@@ -96,7 +147,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             const relatedItem = trans.reservation ? `예약: ${trans.reservation.tour_name}` : (trans.partner ? `업체: ${trans.partner.name}` : '');
             row.innerHTML = `
                 <td>${trans.transaction_date}</td>
-                <td><span class="badge bg-${amountClass.includes('primary') ? 'primary' : 'danger'}">${trans.transaction_type}</span></td>
+                <td><span class="badge bg-${amountClass.includes('primary') ? 'primary' : 'danger'}">${trans.transaction_type === 'INCOME' ? '수입' : '지출'}</span></td>
                 <td>${trans.description}</td>
                 <td class="${amountClass} fw-bold">${Number(trans.amount).toLocaleString()} VND</td>
                 <td>${relatedItem}</td>
@@ -153,16 +204,30 @@ document.addEventListener("DOMContentLoaded", async function() {
         prevPageButton.disabled = !response.previous;
         nextPageButton.disabled = !response.next;
     }
-
+    
     function applyFilters() {
-        const filters = {};
-        if (filterSearchInput.value) filters.search = filterSearchInput.value.trim();
-        if (filterStartDate.value) filters.date_after = filterStartDate.value;
-        if (filterEndDate.value) filters.date_before = filterEndDate.value;
+        const filters = {
+            search: filterSearchInput.value.trim(),
+            date_after: filterStartDate.value,
+            date_before: filterEndDate.value
+        };
+        for (const key in filters) {
+            if (!filters[key]) delete filters[key];
+        }
         populateTransactions(1, filters);
     }
 
     // --- 3. 이벤트 리스너 설정 ---
+    
+    summaryFilterButton.addEventListener('click', () => {
+        updateSummaryCards(summaryYearSelect.value, summaryMonthSelect.value);
+    });
+
+    summaryResetButton.addEventListener('click', () => {
+        summaryYearSelect.value = '';
+        summaryMonthSelect.value = '';
+        updateSummaryCards();
+    });
 
     showNewTransactionModalButton.addEventListener('click', () => {
         newTransactionModal.show();
@@ -197,12 +262,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     filterButton.addEventListener('click', applyFilters);
     filterSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
-    filterResetButton.addEventListener('click', () => {
-        filterSearchInput.value = '';
-        filterStartDate.value = '';
-        filterEndDate.value = '';
-        populateTransactions(1, {});
-    });
 
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters);
@@ -210,10 +269,14 @@ document.addEventListener("DOMContentLoaded", async function() {
     nextPageButton.addEventListener('click', () => {
         if (currentPage < totalPages) populateTransactions(currentPage + 1, currentFilters);
     });
-
+    
     // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
-        await populateSelectOptions();
+        populateYearMonthDropdowns();
+        await Promise.all([
+            populateSelectOptions(),
+            updateSummaryCards() // 페이지 로드 시 전체 현황 조회
+        ]);
         await populateTransactions(1, {});
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -221,5 +284,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             newTransactionModal.show();
         }
     }
+    
     initializePage();
 });

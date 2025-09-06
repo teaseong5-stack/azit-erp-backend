@@ -58,9 +58,9 @@
         
         <div class="card mb-4">
             <div class="card-body">
-                <!-- [추가] 카테고리별 매출 합계 현황판 -->
+                <!-- [수정] 카테고리별 매출 합계 현황판 레이아웃 개선 -->
                 <h5 class="mb-3">매출 현황 요약</h5>
-                <div class="row mb-4 g-3" id="category-summary-cards">
+                <div class="row row-cols-2 row-cols-md-4 row-cols-lg-7 g-3 mb-4" id="category-summary-cards">
                     <!-- JavaScript가 여기에 요약 카드를 동적으로 생성합니다. -->
                     <div class="col"><div class="text-center p-3"><div class="spinner-border text-primary" role="status"></div></div></div>
                 </div>
@@ -117,11 +117,10 @@
         </div>
     </main>
 
-    <!-- 새 예약 등록 모달 (생략) -->
+    <!-- 모달 창들 (생략) -->
     <div class="modal fade" id="newReservationModal" tabindex="-1">
         <div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">새 예약 등록</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="new-reservation-form-container"></div></div></div>
     </div>
-    <!-- 예약 수정/상세보기 모달 (생략) -->
     <div class="modal fade" id="reservationModal" tabindex="-1">
         <div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="modal-title">예약 정보</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer"><div id="modal-extra-buttons" class="me-auto"></div><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button><button type="button" class="btn btn-primary" id="modal-save-button">변경사항 저장</button></div></div></div>
     </div>
