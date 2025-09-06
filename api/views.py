@@ -1,7 +1,7 @@
 import csv
 from django.http import HttpResponse
 from django.db.models import Q, F, Sum, Value, DecimalField, Count
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import Coalesce, ExtractYear, ExtractMonth
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -14,6 +14,48 @@ from .serializers import (
     CustomerSerializer, ReservationSerializer, UserSerializer, 
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
 )
+
+# --- [추가] 리포트 페이지 전용 요약 API ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def report_summary(request):
+    """
+    리포트 페이지의 요약 카드 데이터를 생성하는 API.
+    기존 reservation_summary와 달리, group_by 없이 총합계만 계산합니다.
+    """
+    queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
+
+    # Reservation 목록 뷰와 동일한 필터링 로직 적용
+    manager_id = request.query_params.get('manager', None)
+    category = request.query_params.get('category', None)
+    search = request.query_params.get('search', None)
+    
+    start_date_gte = request.query_params.get('start_date__gte')
+    start_date_lte = request.query_params.get('start_date__lte')
+
+    if manager_id:
+        queryset = queryset.filter(manager_id=manager_id)
+    if category:
+        queryset = queryset.filter(category=category)
+    if search:
+        queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
+    
+    if start_date_gte:
+        queryset = queryset.filter(start_date__gte=start_date_gte)
+    if start_date_lte:
+        queryset = queryset.filter(start_date__lte=start_date_lte)
+
+    # 집계 연산
+    totals = queryset.aggregate(
+        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
+        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
+    )
+    totals['total_margin'] = totals['total_sales'] - totals['total_cost']
+    
+    manager_counts = list(queryset.values('manager__username').annotate(count=Count('id')).order_by('-count'))
+    
+    summary_data = {"totals": totals, "manager_counts": manager_counts}
+    return Response(summary_data)
 
 # --- 계정 등록 뷰 ---
 # ... 기존 코드 ...
