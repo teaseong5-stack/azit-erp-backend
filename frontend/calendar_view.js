@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'resourceTimelineMonth', // 초기 뷰 설정
+            initialView: 'resourceTimelineMonth',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -123,7 +123,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 페이지 초기화 함수
     async function initializePage() {
-        // 예약 데이터와 사용자(담당자) 데이터를 병렬로 불러옵니다.
         const [reservationResponse, userResponse] = await Promise.all([
             window.apiFetch('reservations/all/'),
             window.apiFetch('users')
@@ -136,7 +135,6 @@ document.addEventListener("DOMContentLoaded", function() {
             allUsers = userResponse;
         }
 
-        // '담당자별 보기'로 초기 캘린더를 렌더링합니다.
         initializeCalendar('manager');
     }
 
