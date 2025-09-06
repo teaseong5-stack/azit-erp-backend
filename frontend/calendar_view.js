@@ -5,33 +5,22 @@ document.addEventListener("DOMContentLoaded", function() {
     const calendarEl = document.getElementById('calendar');
     const detailModal = new bootstrap.Modal(document.getElementById('reservationDetailModal'));
     const modalBodyContent = document.getElementById('modal-body-content');
-    const resourceFilter = document.getElementById('resource-filter');
     
     let calendar = null;
-    let allReservations = []; // 전체 예약 데이터를 저장할 배열
-    let allUsers = []; // 전체 사용자(담당자) 데이터를 저장할 배열
+    let allReservations = []; // 전체 예약 데이터만 저장합니다.
 
-    const categoryResources = [
-        { id: 'TOUR', title: '투어' },
-        { id: 'RENTAL_CAR', title: '렌터카' },
-        { id: 'ACCOMMODATION', title: '숙박' },
-        { id: 'GOLF', title: '골프' },
-        { id: 'TICKET', title: '티켓' },
-        { id: 'OTHER', title: '기타' }
-    ];
-
+    const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
     const categoryColors = {
-        'TOUR': '#0d6efd', 'RENTAL_CAR': '#198754',
-        'ACCOMMODATION': '#dc3545', 'GOLF': '#6f42c1',
-        'TICKET': '#fd7e14', 'OTHER': '#6c757d'
+        'TOUR': 'rgba(54, 162, 235, 0.8)', 'RENTAL_CAR': 'rgba(75, 192, 192, 0.8)',
+        'ACCOMMODATION': 'rgba(255, 99, 132, 0.8)', 'GOLF': 'rgba(153, 102, 255, 0.8)',
+        'TICKET': 'rgba(255, 159, 64, 0.8)', 'OTHER': 'rgba(108, 117, 125, 0.8)'
     };
 
     /**
-     * 예약 데이터를 FullCalendar 이벤트 형식으로 변환하는 함수
-     * @param {string} groupBy - 리소스 그룹 기준 ('manager' 또는 'category')
+     * [복원] 간단한 이벤트 형식으로 데이터를 변환합니다.
      */
-    function formatEvents(groupBy) {
-        return allReservations.map(res => {
+    function formatEvents(reservations) {
+        return reservations.map(res => {
             let endDate = res.end_date;
             if (endDate) {
                 const date = new Date(endDate);
@@ -39,18 +28,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 endDate = date.toISOString().split('T')[0];
             }
             const customerName = res.customer ? res.customer.name : '고객 미지정';
-            
-            let resourceId;
-            if (groupBy === 'manager') {
-                resourceId = res.manager ? res.manager.id : 'unassigned';
-            } else { // category
-                resourceId = res.category;
-            }
-
+            const categoryLabel = categoryLabels[res.category] || res.category;
             return {
                 id: res.id,
-                resourceId: resourceId,
-                title: `${customerName} | ${res.tour_name}`,
+                title: `[${categoryLabel}] ${customerName} | ${res.tour_name}`,
                 start: res.start_date,
                 end: endDate,
                 backgroundColor: categoryColors[res.category] || '#6c757d',
@@ -60,32 +41,20 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     /**
-     * FullCalendar를 초기화하고 렌더링하는 함수
-     * @param {string} groupBy - 리소스 그룹 기준 ('manager' 또는 'category')
+     * [복원] 기본 FullCalendar를 초기화하고 렌더링합니다.
      */
-    function initializeCalendar(groupBy) {
-        let resources = [];
-        if (groupBy === 'manager') {
-            resources = allUsers.map(u => ({ id: u.id, title: u.username }));
-            resources.push({ id: 'unassigned', title: '미지정' }); // 담당자 없는 경우
-        } else { // category
-            resources = categoryResources;
-        }
-
-        const events = formatEvents(groupBy);
-
+    function initializeCalendar(events) {
         if (calendar) {
             calendar.destroy();
         }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'resourceTimelineMonth',
+            initialView: 'dayGridMonth', // 기본 월별 보기
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'resourceTimelineMonth,resourceTimelineWeek,dayGridMonth,listWeek'
+                right: 'dayGridMonth,timeGridWeek,listWeek' // 기본 보기 옵션
             },
-            resources: resources,
             events: events,
             locale: 'ko',
             height: '80vh',
@@ -116,28 +85,16 @@ document.addEventListener("DOMContentLoaded", function() {
         calendar.render();
     }
 
-    // 필터 변경 시 캘린더 다시 그리기
-    resourceFilter.addEventListener('change', (e) => {
-        initializeCalendar(e.target.value);
-    });
-
     // 페이지 초기화 함수
     async function initializePage() {
-        const [reservationResponse, userResponse] = await Promise.all([
-            window.apiFetch('reservations/all/'),
-            window.apiFetch('users')
-        ]);
+        const reservationResponse = await window.apiFetch('reservations/all/');
 
         if (reservationResponse && reservationResponse.results) {
             allReservations = reservationResponse.results;
+            const events = formatEvents(allReservations);
+            initializeCalendar(events);
         }
-        if (userResponse) {
-            allUsers = userResponse;
-        }
-
-        initializeCalendar('manager');
     }
 
     initializePage();
 });
-
