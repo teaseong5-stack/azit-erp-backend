@@ -15,27 +15,32 @@ from datetime import timedelta
 import os
 import dj_database_url
 
-# 프로젝트의 기본 경로를 설정합니다.
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# --- 보안 및 기본 설정 ---
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# 운영 환경에서는 반드시 환경 변수로 SECRET_KEY를 설정해야 합니다.
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-development')
 
-# 운영 환경에서는 DEBUG 모드를 꺼야 합니다.
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# 허용할 호스트를 설정합니다. Render 배포 환경과 로컬 개발 환경을 모두 포함합니다.
+
+# [수정 사항] ALLOWED_HOSTS 설정을 강화합니다.
 ALLOWED_HOSTS = []
+
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost', '.onrender.com'])
+
+# 로컬 개발 환경과 Render의 모든 서브도메인을 허용하기 위해 와일드카드를 추가합니다.
+ALLOWED_HOSTS.extend(['127.0.0.1', '.onrender.com'])
 
 
-# --- 애플리케이션 정의 ---
+# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -45,21 +50,18 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # 서드파티 라이브러리
     'rest_framework',
-    'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
     
-    # 직접 개발한 앱
     'api',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Static 파일 서빙을 위한 미들웨어
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 (CommonMiddleware보다 위에 위치)
+    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 위치 확인
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -88,28 +90,39 @@ TEMPLATES = [
 WSGI_APPLICATION = 'azit_erp_backend.wsgi.application'
 
 
-# --- 데이터베이스 설정 ---
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
     'default': dj_database_url.config(
-        # 환경 변수(DATABASE_URL)가 없을 경우(로컬 개발 환경) SQLite를 사용합니다.
+        # 환경 변수(DATABASE_URL)가 없을 경우(로컬 개발 환경) SQLite 사용
         default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-        conn_max_age=600 # 운영 환경에서 DB 연결을 600초간 유지합니다.
+        conn_max_age=600 # 운영 환경 DB 연결 유지 시간 설정
     )
 }
 
 
-# --- 비밀번호 검증 설정 ---
+# Password validation
+# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
 
-# --- 국제화 설정 ---
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i1n/
 
 LANGUAGE_CODE = "ko-kr"
 TIME_ZONE = "Asia/Seoul"
@@ -117,28 +130,28 @@ USE_I18N = True
 USE_TZ = True
 
 
-# --- 정적 파일 (Static files) 설정 ---
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
-# --- 기본 Primary Key 필드 타입 ---
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# --- 추가 설정들 ---
 
-# --- 서드파티 라이브러리 추가 설정 ---
-
-# CORS (Cross-Origin Resource Sharing) 설정: 다른 도메인의 프론트엔드와 통신을 허용합니다.
+# CORS (Cross-Origin Resource Sharing) 설정
 CORS_ALLOWED_ORIGINS = [
     "https://azit-erp-frontend.onrender.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
 
-# CSRF (Cross-Site Request Forgery) 보호 설정: 신뢰할 수 있는 출처를 지정합니다.
+# CSRF (Cross-Site Request Forgery) 보호 설정
 CSRF_TRUSTED_ORIGINS = [
     "https://azit-erp-frontend.onrender.com",
     "http://localhost:8000",
@@ -149,22 +162,18 @@ if RENDER_EXTERNAL_URL:
     CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
 
 
-# Django REST Framework 설정
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50 # 기본 페이지네이션 크기를 50으로 설정
 }
 
-# Simple JWT (JSON Web Token) 설정
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1), # Access Token 유효기간: 1일
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7), # Refresh Token 유효기간: 7일
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
-    "UPDATE_LAST_LOGIN": True,
+    "UPDATE_LAST_LOGIN": False,
 
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
