@@ -3,14 +3,12 @@
  * 아지트 ERP의 '예약 관리' 페이지에 대한 모든 동적 기능 및 API 연동을 처리합니다.
  *
  * 주요 기능:
- * - 예약 목록 조회, 필터링, 검색.
- * - 독립된 필터와 연동되는 상단 요약 현황판.
- * - 숫자 기반 페이지네이션 및 이전/다음 버튼.
- * - 모달을 통한 예약 생성 및 수정.
- * - 관리자 권한에 따른 담당자 변경 기능 포함.
- * - 선택된 카테고리에 따라 동적으로 변경되는 상세 정보 폼.
- * - 고객 검색 기능이 포함된 드롭다운.
- * - 선택 예약 일괄 삭제 및 전체 데이터 CSV 내보내기.
+ * - 예약 목록 조회, 필터링, 검색 및 상단 요약 현황판
+ * - 숫자 기반 페이지네이션 및 이전/다음 버튼
+ * - 모달을 통한 예약 생성 및 수정 (관리자 권한에 따른 담당자 변경 기능 포함)
+ * - 선택된 카테고리에 따라 동적으로 변경되는 상세 정보 폼
+ * - 고객 검색 기능이 포함된 드롭다운
+ * - 선택 예약 일괄 삭제 및 전체 데이터 CSV 내보내기
  */
 document.addEventListener("DOMContentLoaded", async function() {
     // 해당 페이지가 아닐 경우 스크립트 실행 중단
@@ -29,15 +27,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     const modalBody = document.getElementById('modal-body');
     const modalSaveButton = document.getElementById('modal-save-button');
 
-    // 현황판 필터 요소
+    // 현황판 요소
     const categorySummaryCards = document.getElementById('category-summary-cards');
-    const summaryYearSelect = document.getElementById('summary-year-select');
-    const summaryMonthSelect = document.getElementById('summary-month-select');
-    const summaryStartDate = document.getElementById('summary-start-date');
-    const summaryEndDate = document.getElementById('summary-end-date');
-    const summaryFilterButton = document.getElementById('summary-filter-button');
     
-    // 목록 필터 요소
+    // 통합 필터 요소
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
     const filterStartDate = document.getElementById('filter-start-date');
@@ -63,22 +56,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     let allUsers = []; 
 
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
-
-    /**
-     * 현황판 전용 년/월 필터 드롭다운을 생성하는 함수
-     */
-    function populateSummaryFilters() {
-        const currentYear = new Date().getFullYear();
-        summaryYearSelect.innerHTML = '<option value="">전체</option>';
-        for (let i = 0; i < 5; i++) {
-            const year = currentYear - i;
-            summaryYearSelect.innerHTML += `<option value="${year}">${year}년</option>`;
-        }
-        summaryMonthSelect.innerHTML = '<option value="">전체</option>';
-        for (let i = 1; i <= 12; i++) {
-            summaryMonthSelect.innerHTML += `<option value="${i}">${i}월</option>`;
-        }
-    }
 
     /**
      * 카테고리별 매출 요약 현황판을 업데이트하는 함수
@@ -581,32 +558,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 4. 이벤트 리스너 설정 ---
 
-    /**
-     * [수정] 현황판 전용 '조회' 버튼 이벤트 리스너
-     */
-    summaryFilterButton.addEventListener('click', () => {
-        const summaryFilters = {};
-        const year = summaryYearSelect.value;
-        const month = summaryMonthSelect.value;
-        const startDate = summaryStartDate.value;
-        const endDate = summaryEndDate.value;
-
-        // 일자별 검색이 우선순위가 높음
-        if (startDate && endDate) {
-            summaryFilters.start_date__gte = startDate;
-            summaryFilters.start_date__lte = endDate;
-        } else if (year) {
-            summaryFilters.year = year;
-            if (month) {
-                summaryFilters.month = month;
-            }
-        }
-        updateCategorySummary(summaryFilters);
-    });
-
-    /**
-     * [수정] 예약 목록 '조회' 버튼은 이제 목록만 업데이트합니다.
-     */
     filterButton.addEventListener('click', () => {
         const filters = {
             category: filterCategory.value,
@@ -618,6 +569,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             if (!filters[key]) delete filters[key];
         }
         populateReservations(1, filters);
+        updateCategorySummary(filters);
     });
 
     paginationContainers.forEach(container => {
@@ -672,13 +624,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 5. 페이지 초기화 실행 ---
 
     async function initializePage() {
-        populateSummaryFilters(); // 현황판 필터 생성
-
-        await Promise.all([
-            fetchAllCustomers(), 
-            fetchAllUsers(),
-            updateCategorySummary() // 초기 전체 현황판 로드
-        ]);
+        await Promise.all([fetchAllCustomers(), fetchAllUsers(), updateCategorySummary()]);
         
         newReservationFormContainer.innerHTML = renderFormFields('new-reservation');
         initializeSearchableCustomerDropdown('new-reservation');
@@ -741,9 +687,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     document.getElementById('new-reservation-customer_id').value = '';
                     newCategorySelect.value = 'TOUR';
                     handleCategoryChange('new-reservation');
-                    // 새 예약 등록 후에는 필터 없는 전체 데이터로 현황판과 목록을 모두 새로고침
                     populateReservations(1, {});
-                    updateCategorySummary({});
+                    updateCategorySummary({}); // 현황판도 새로고침
                 }
             });
         }
