@@ -37,7 +37,7 @@ if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # 로컬 개발 환경과 Render의 모든 서브도메인을 허용하기 위해 와일드카드를 추가합니다.
-ALLOWED_HOSTS.extend(['127.0.0.1', '.onrender.com'])
+ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost', '.onrender.com'])
 
 
 # Application definition
