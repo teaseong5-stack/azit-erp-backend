@@ -154,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     /**
      * 카테고리별 매출 요약 현황판을 업데이트하는 함수
-     * [개선] API 호출 실패 시 예외 처리 추가
+     * [수정] 카드 디자인을 더 작게 변경했습니다.
      */
     async function updateCategorySummary(filters = {}) {
         currentSummaryFilters = filters;
@@ -169,7 +169,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         try {
             summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
         } catch (error) {
-            // [개선] 실패 시 오류 메시지를 현황판에 표시하고 진행
             console.error("Failed to update category summary:", error);
             categorySummaryCards.innerHTML = '<div class="col-12"><p class="text-danger text-center py-3">요약 정보를 불러오는데 실패했습니다.</p></div>';
             return;
@@ -178,7 +177,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         categorySummaryCards.innerHTML = '';
         
         if (!summaryData) {
-            // 데이터가 비어있는 경우 (오류는 아님)
             categorySummaryCards.innerHTML = '<div class="col"><p class="text-muted text-center">요약 정보가 없습니다.</p></div>';
             return;
         }
@@ -190,14 +188,31 @@ document.addEventListener("DOMContentLoaded", async function() {
         Object.entries(categoryLabels).forEach(([key, label]) => {
             const sales = salesMap.get(key) || 0;
             totalSales += sales;
+            // [수정] 카드 디자인 변경: 패딩(p-2) 및 폰트 크기(fs-6) 축소
             const cardHtml = `
                 <div class="col">
-                    <div class="card card-body text-center h-100">
-                        <h6 class="card-subtitle mb-2 text-muted">${label}</h6>
-                        <p class="card-text fs-5 fw-bold">${sales.toLocaleString()} VND</p>
+                    <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <h6 class="card-subtitle mb-1 text-muted fs-6">${label}</h6>
+                        <p class="card-text fs-6 fw-bold mb-0">${sales.toLocaleString()} VND</p>
                     </div>
+                    </div>
                 </div>
             `;
+            categorySummaryCards.innerHTML += cardHtml;
+        });
+
+        // [수정] 총 합계 카드 디자인 변경
+        const totalCardHtml = `
+            <div class="col">
+                <div class="card text-center h-100 bg-dark text-white">
+                <div class="card-body p-2">
+                    <h6 class="card-subtitle mb-1 text-white-50 fs-6">총 합계</h6>
+                    <p class="card-text fs-6 fw-bold mb-0">${totalSales.toLocaleString()} VND</p>
+                </div>
+                </div>
+            </div>
+        `;
             categorySummaryCards.innerHTML += cardHtml;
         });
 
