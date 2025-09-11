@@ -216,12 +216,15 @@ document.addEventListener("DOMContentLoaded", async function() {
             categorySummaryCards.innerHTML += cardHtml;
         });
 
+        // [수정] 총 합계 카드 디자인 변경
         const totalCardHtml = `
             <div class="col">
-                <div class="card card-body text-center h-100 bg-dark text-white">
-                    <h6 class="card-subtitle mb-2 text-white-50">총 합계</h6>
-                    <p class="card-text fs-5 fw-bold">${totalSales.toLocaleString()} VND</p>
+                <div class="card text-center h-100 bg-dark text-white">
+                <div class="card-body p-2">
+                    <h6 class="card-subtitle mb-1 text-white-50 fs-6">총 합계</h6>
+                    <p class="card-text fs-6 fw-bold mb-0">${totalSales.toLocaleString()} VND</p>
                 </div>
+                </div>
             </div>
         `;
         categorySummaryCards.innerHTML += totalCardHtml;
