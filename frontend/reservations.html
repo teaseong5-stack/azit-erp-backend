@@ -7,83 +7,77 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* 기존 스타일은 유지 */
-        #category-summary-cards > div:nth-child(7n+1) .card { border-left: 5px solid #0d6efd; } /* Blue */
-        #category-summary-cards > div:nth-child(7n+2) .card { border-left: 5px solid #198754; } /* Green */
-        #category-summary-cards > div:nth-child(7n+3) .card { border-left: 5px solid #ffc107; } /* Yellow */
-        #category-summary-cards > div:nth-child(7n+4) .card { border-left: 5px solid #dc3545; } /* Red */
-        #category-summary-cards > div:nth-child(7n+5) .card { border-left: 5px solid #6f42c1; } /* Purple */
-        #category-summary-cards > div:nth-child(7n+6) .card { border-left: 5px solid #fd7e14; } /* Orange */
-        #category-summary-cards > div:nth-child(7n) .card   { border-left: 5px solid #0dcaf0; } /* Cyan */
+        /* --- style.css와 충돌을 해결하고 예약 관리 페이지에만 적용되는 개별 스타일 --- */
 
-        /* --- 요청사항 반영을 위한 추가 및 수정 스타일 --- */
+        /* * [해결] 사이드바와 콘텐츠 너비는 style.css의 글로벌 설정을 따르도록 관련 규칙을 제거합니다.
+         * 모든 페이지에서 일관된 레이아웃을 유지합니다. 
+        */
 
-        /* 1. 좌측/우측 사이즈 조정 (사이드바/콘텐츠 영역) */
-        /* style.css에 정의된 값을 덮어쓴다고 가정합니다. */
-        nav.sidebar {
-            width: 240px; /* 사이드바 너비를 줄여 좌측 영역 축소 (기존 280px 가정 시 약 15% 감소) */
-        }
-        main.content {
-            margin-left: 240px; /* 줄어든 사이드바 너비만큼만 왼쪽 여백을 줌 */
-            width: calc(100% - 240px); /* 확보된 공간만큼 콘텐츠(우측) 영역 확장 */
-            max-width: none; /* 기존 max-width 제한 해제 */
-        }
-
-        /* 1. 카드 현황판 사이즈 50% 축소 및 카테고리 텍스트 확대 */
+        /* 카드 현황판 스타일 (디자인 통일 및 사이즈 축소) */
+        /* 이 부분은 예약 관리 페이지의 고유 스타일이므로 유지합니다. */
         #category-summary-cards .card {
             color: white;
-            border: none;
-            min-height: 45px; /* 카드 세로 사이즈 대폭 축소 (50% 이상) */
+            min-height: 38px;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
+            /* [해결] 호버 효과는 style.css의 글로벌 스타일이 적용되므로 중복되는 부분은 제거합니다. */
         }
         #category-summary-cards .card-body {
-            padding: 0.2rem 0.5rem; /* 카드 내부 여백 축소 */
+            padding: 0.2rem 0.5rem;
             text-align: center;
+            flex-grow: 0;
         }
         #category-summary-cards .card-title {
-            font-size: 0.8rem; /* 제목(카테고리) 폰트 크기 확대 */
-            font-weight: bold;
+            font-size: 0.7rem;
+            font-weight: 500;
             margin-bottom: 0;
+            line-height: 1;
         }
         #category-summary-cards .card-text {
-            font-size: 1rem; /* 숫자 폰트 크기 축소 */
-            font-weight: normal;
+            font-size: 0.9rem;
+            font-weight: bold;
+            line-height: 1.2;
         }
 
-        /* 기존 border 스타일을 background-color로 덮어쓰기 */
-        #category-summary-cards > div:nth-child(7n+1) .card { background-color: #0d6efd; }
-        #category-summary-cards > div:nth-child(7n) .card   { background-color: #0dcaf0; color: #34a853; }
+        /* 모든 카드의 디자인을 배경색 스타일로 통일 */
+        #category-summary-cards > div:nth-child(7n+1) .card { background-color: #0d6efd; } /* Blue */
+        #category-summary-cards > div:nth-child(7n+2) .card { background-color: #198754; } /* Green */
+        #category-summary-cards > div:nth-child(7n+3) .card { background-color: #ffc107; color: #343a40; } /* Yellow */
+        #category-summary-cards > div:nth-child(7n+4) .card { background-color: #dc3545; } /* Red */
+        #category-summary-cards > div:nth-child(7n+5) .card { background-color: #6f42c1; } /* Purple */
+        #category-summary-cards > div:nth-child(7n+6) .card { background-color: #fd7e14; } /* Orange */
+        #category-summary-cards > div:nth-child(7n) .card   { background-color: #0dcaf0; color: #343a40; } /* Cyan */
 
-        /* 4. 새 예약 등록 팝업 사이즈 및 내부 항목 조정 */
+
+        /* 새 예약 등록 팝업 사이즈 및 내부 항목 조정 */
         #newReservationModal .modal-dialog {
-            max-width: 55%; /* 가로 사이즈 재조정 */
+            max-width: 65%;
         }
         #newReservationModal .modal-dialog-scrollable .modal-content {
-            max-height: 85vh; /* 스크롤이 거의 생기지 않도록 세로 높이 확보 */
+            max-height: 85vh;
         }
-        /* 2. 팝업 내부 폼 요소들을 그리드 레이아웃으로 변경하여 한 열에 3~4개씩 배치 */
         #new-reservation-form-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 0 1rem; /* 좌우 간격만 줌 */
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.75rem 1.2rem;
         }
-        /* 팝업 내부 폼 요소들 사이즈를 줄여 한 화면에 보이도록 함 */
         #new-reservation-form-container .mb-3 {
-            margin-bottom: 0.75rem !important; /* 요소간 세로 간격 조정 */
+            margin-bottom: 0 !important;
         }
         #new-reservation-form-container .form-label {
-            font-size: 0.8rem; /* 라벨 폰트 크기 축소 */
+            font-size: 0.8rem;
             margin-bottom: .2rem;
         }
         #new-reservation-form-container .form-control,
         #new-reservation-form-container .form-select {
-            font-size: 0.85rem; /* 입력창 폰트 크기 축소 */
-            padding: .2rem .4rem; /* 입력창 내부 여백 축소 */
+            font-size: 0.85rem;
+            padding: .2rem .4rem;
         }
 
-        /* 3. 예약 목록 텍스트 크기 조정 */
+        /* 예약 목록 텍스트 크기 조정 */
         .table-container .table > tbody > tr > td {
-            font-size: 0.85rem; /* 기존보다 1pt 가량 작게 조정 */
+            font-size: 0.85rem;
             padding-top: 0.4rem;
             padding-bottom: 0.4rem;
             vertical-align: middle;
@@ -91,6 +85,7 @@
     </style>
 </head>
 <body>
+<!-- ... (body 내용은 변경 없음) ... -->
     <!-- 사이드바 메뉴 -->
     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
@@ -145,11 +140,10 @@
         </div>
         
         <div class="card mb-4">
-            <div class="card-body p-3"> <!-- card-body padding 조정 -->
+            <div class="card-body p-3">
                 <h5 class="mb-3">매출 현황 요약</h5>
                 
-                <!-- 1. 조회 도구 사이즈를 줄여서 한 열에 배치 -->
-                <div class="row g-2 mb-4 align-items-center"> <!-- g-3에서 g-2로 간격 축소 -->
+                <div class="row g-2 mb-4 align-items-center">
                     <div class="col-md-auto">
                         <label for="summary-filter-year" class="form-label visually-hidden">년도</label>
                         <select id="summary-filter-year" class="form-select form-select-sm"></select>
@@ -178,7 +172,6 @@
                     </div>
                 </div>
 
-                <!-- 2. 카드 형식 현황판을 가로/세로 사이즈 모두 줄여서 한 열에 배치 -->
                 <div class="row row-cols-2 row-cols-md-4 row-cols-lg-7 g-2 mb-4" id="category-summary-cards">
                     <!-- 카드들은 여기에 동적으로 생성됩니다. -->
                 </div>
@@ -204,12 +197,11 @@
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="select-all-checkbox" class="form-check-input"></th>
-                                <!-- 3. 데이터 흐름에 맞게 컬럼 순서 변경 -->
+                                <th>고객명</th>
                                 <th>예약일</th>
                                 <th>시작일</th>
-                                <th>고객명</th>
-                                <th>상품명</th>
                                 <th>카테고리</th>
+                                <th>상품명</th>
                                 <th>판매가</th>
                                 <th>매입가</th>
                                 <th>마진</th>
@@ -237,7 +229,6 @@
         </div>
     </main>
 
-    <!-- 3. 새 예약 등록 팝업 사이즈 조정 (CSS로 처리) -->
     <div class="modal fade" id="newReservationModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">새 예약 등록</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="new-reservation-form-container"></div></div></div>
     </div>
