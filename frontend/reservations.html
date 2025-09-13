@@ -18,27 +18,33 @@
 
         /* --- 요청사항 반영을 위한 추가 및 수정 스타일 --- */
 
-        /* 4. 예약 관리 화면 전체 가로 사이즈 확장 */
+        /* 1. 좌측/우측 사이즈 조정 (사이드바/콘텐츠 영역) */
+        /* style.css에 정의된 값을 덮어쓴다고 가정합니다. */
+        nav.sidebar {
+            width: 240px; /* 사이드바 너비를 줄여 좌측 영역 축소 (기존 280px 가정 시 약 15% 감소) */
+        }
         main.content {
-            max-width: 95%; /* 콘텐츠 최대 너비를 화면의 95%로 확장 */
-            margin: 0 auto; /* 중앙 정렬 */
+            margin-left: 240px; /* 줄어든 사이드바 너비만큼만 왼쪽 여백을 줌 */
+            width: calc(100% - 240px); /* 확보된 공간만큼 콘텐츠(우측) 영역 확장 */
+            max-width: none; /* 기존 max-width 제한 해제 */
         }
 
-        /* 2. 카드 현황판 사이즈 및 디자인 변경 */
+        /* 2. 카드 현황판 사이즈 1/3로 축소 */
         #category-summary-cards .card {
             color: white; /* 텍스트 색상을 기본적으로 흰색으로 변경 */
             border: none;
-            min-height: 90px; /* 카드 세로 사이즈 축소 */
+            min-height: 65px; /* 카드 세로 사이즈 대폭 축소 */
             justify-content: center;
         }
         #category-summary-cards .card-body {
-            padding: 0.5rem 0.75rem; /* 카드 내부 여백 축소 */
+            padding: 0.25rem 0.5rem; /* 카드 내부 여백 축소 */
         }
         #category-summary-cards .card-title {
-            font-size: 0.85rem; /* 제목 폰트 크기 축소 */
+            font-size: 0.7rem; /* 제목 폰트 크기 축소 */
+            margin-bottom: 0.1rem;
         }
         #category-summary-cards .card-text {
-            font-size: 1.5rem; /* 숫자 폰트 크기 조정 */
+            font-size: 1.2rem; /* 숫자 폰트 크기 조정 */
             font-weight: bold;
         }
 
@@ -52,12 +58,33 @@
         #category-summary-cards > div:nth-child(7n+6) .card { background-color: #fd7e14; }
         #category-summary-cards > div:nth-child(7n) .card   { background-color: #0dcaf0; color: #343a40; }
 
-        /* 3. 새 예약 등록 팝업 사이즈 조정 (기존 대비 약 50% 크기) */
+        /* 4. 새 예약 등록 팝업 사이즈 및 내부 항목 조정 */
         #newReservationModal .modal-dialog {
-            max-width: 60%; /* 가로 사이즈 축소 */
+            max-width: 48%; /* 가로 사이즈 축소 (기존 60%에서 20% 감소) */
         }
         #newReservationModal .modal-dialog-scrollable .modal-content {
-            max-height: calc(100vh - 120px); /* 세로 사이즈 축소 */
+            max-height: 85vh; /* 스크롤이 거의 생기지 않도록 세로 높이 확보 */
+        }
+        /* 팝업 내부 폼 요소들 사이즈를 줄여 한 화면에 보이도록 함 */
+        #new-reservation-form-container .mb-3 {
+            margin-bottom: 0.5rem !important; /* 요소간 세로 간격 축소 */
+        }
+        #new-reservation-form-container .form-label {
+            font-size: 0.8rem; /* 라벨 폰트 크기 축소 */
+            margin-bottom: .2rem;
+        }
+        #new-reservation-form-container .form-control,
+        #new-reservation-form-container .form-select {
+            font-size: 0.85rem; /* 입력창 폰트 크기 축소 */
+            padding: .2rem .4rem; /* 입력창 내부 여백 축소 */
+        }
+
+        /* 3. 예약 목록 텍스트 크기 조정 */
+        .table-container .table > tbody > tr > td {
+            font-size: 0.85rem; /* 기존보다 1pt 가량 작게 조정 */
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
+            vertical-align: middle;
         }
     </style>
 </head>
