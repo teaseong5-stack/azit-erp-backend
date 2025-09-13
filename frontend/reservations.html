@@ -6,86 +6,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* --- style.css와 충돌을 해결하고 예약 관리 페이지에만 적용되는 개별 스타일 --- */
-
-        /* * [해결] 사이드바와 콘텐츠 너비는 style.css의 글로벌 설정을 따르도록 관련 규칙을 제거합니다.
-         * 모든 페이지에서 일관된 레이아웃을 유지합니다. 
-        */
-
-        /* 카드 현황판 스타일 (디자인 통일 및 사이즈 축소) */
-        /* 이 부분은 예약 관리 페이지의 고유 스타일이므로 유지합니다. */
-        #category-summary-cards .card {
-            color: white;
-            min-height: 38px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            /* [해결] 호버 효과는 style.css의 글로벌 스타일이 적용되므로 중복되는 부분은 제거합니다. */
-        }
-        #category-summary-cards .card-body {
-            padding: 0.2rem 0.5rem;
-            text-align: center;
-            flex-grow: 0;
-        }
-        #category-summary-cards .card-title {
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-bottom: 0;
-            line-height: 1;
-        }
-        #category-summary-cards .card-text {
-            font-size: 0.9rem;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-
-        /* 모든 카드의 디자인을 배경색 스타일로 통일 */
-        #category-summary-cards > div:nth-child(7n+1) .card { background-color: #0d6efd; } /* Blue */
-        #category-summary-cards > div:nth-child(7n+2) .card { background-color: #198754; } /* Green */
-        #category-summary-cards > div:nth-child(7n+3) .card { background-color: #ffc107; color: #343a40; } /* Yellow */
-        #category-summary-cards > div:nth-child(7n+4) .card { background-color: #dc3545; } /* Red */
-        #category-summary-cards > div:nth-child(7n+5) .card { background-color: #6f42c1; } /* Purple */
-        #category-summary-cards > div:nth-child(7n+6) .card { background-color: #fd7e14; } /* Orange */
-        #category-summary-cards > div:nth-child(7n) .card   { background-color: #0dcaf0; color: #343a40; } /* Cyan */
-
-
-        /* 새 예약 등록 팝업 사이즈 및 내부 항목 조정 */
-        #newReservationModal .modal-dialog {
-            max-width: 65%;
-        }
-        #newReservationModal .modal-dialog-scrollable .modal-content {
-            max-height: 85vh;
-        }
-        #new-reservation-form-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 0.75rem 1.2rem;
-        }
-        #new-reservation-form-container .mb-3 {
-            margin-bottom: 0 !important;
-        }
-        #new-reservation-form-container .form-label {
-            font-size: 0.8rem;
-            margin-bottom: .2rem;
-        }
-        #new-reservation-form-container .form-control,
-        #new-reservation-form-container .form-select {
-            font-size: 0.85rem;
-            padding: .2rem .4rem;
-        }
-
-        /* 예약 목록 텍스트 크기 조정 */
-        .table-container .table > tbody > tr > td {
-            font-size: 0.85rem;
-            padding-top: 0.4rem;
-            padding-bottom: 0.4rem;
-            vertical-align: middle;
-        }
-    </style>
 </head>
 <body>
-<!-- ... (body 내용은 변경 없음) ... -->
     <!-- 사이드바 메뉴 -->
     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
