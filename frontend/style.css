@@ -153,3 +153,17 @@ body {
         padding: 1.5rem;
     }
 }
+
+/* --- Reservation Page Specific Styles (Integrated) --- */
+#category-summary-cards .card {
+    min-height: 22px; /* 기존 38px에서 축소 */
+}
+#category-summary-cards .card-body {
+    padding: 0.1rem 0.4rem; /* 내부 여백 축소 */
+}
+#category-summary-cards .card-title {
+    font-size: 0.6rem; /* 폰트 크기 축소 */
+}
+#category-summary-cards .card-text {
+    font-size: 0.8rem; /* 폰트 크기 축소 */
+}
