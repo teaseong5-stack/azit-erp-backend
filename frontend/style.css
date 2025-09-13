@@ -156,20 +156,37 @@ body {
 
 /* --- Reservation Page Specific Styles (Integrated) --- */
 #category-summary-cards .card {
-    min-height: 18px; /* 더 얇게 수정 */
+    min-height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 #category-summary-cards .card-body {
-    padding: 0.1rem 0.5rem; /* 내부 여백 재조정 */
+    padding: 0.1rem 0.5rem;
 }
 #category-summary-cards .card-title {
     font-size: 0.6rem;
-    line-height: 1; /* 상하 간격 제거 */
+    line-height: 1; 
     margin-bottom: 0.1rem;
 }
 #category-summary-cards .card-text {
     font-size: 0.8rem;
-    line-height: 1; /* 상하 간격 제거 */
+    line-height: 1;
+}
+
+.table-container .table td {
+    white-space: nowrap;
+}
+
+/* --- [추가] 새 예약 등록 팝업 그리드 레이아웃 --- */
+#new-reservation-form-container {
+    display: grid;
+    /* 화면 너비에 따라 자동으로 컬럼 수가 조절되는 그리드 (한 컬럼의 최소 너비 280px) */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem 1.5rem; /* 세로 간격, 가로 간격 */
+}
+
+/* 팝업 내 폼 그룹의 불필요한 하단 마진 제거 */
+#new-reservation-form-container .form-group {
+    margin-bottom: 0;
 }
