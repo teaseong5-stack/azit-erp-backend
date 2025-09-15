@@ -241,8 +241,11 @@ async function populateSelectOptions() {
         newTransactionModal.show();
     });
 
-    transactionForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
+    // 이 코드 블록 전체를 복사하여 기존의 transactionForm.addEventListener 부분을 교체하세요.
+transactionForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    try { // 1. try 블록으로 API 호출 및 후속 처리를 감쌉니다.
         const formData = {
             transaction_date: document.getElementById('trans-date').value,
             transaction_type: document.getElementById('trans-type').value,
@@ -255,14 +258,30 @@ async function populateSelectOptions() {
             reservation_id: reservationSelect.value || null,
             partner_id: partnerSelect.value || null,
         };
-        const response = await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
-        if (response) {
-            newTransactionModal.hide();
-            transactionForm.reset();
-            expenseItemWrapper.style.display = 'none';
-            populateTransactions(1, {});
-        }
-    });
+
+        const response = await window.apiFetch('transactions', { 
+            method: 'POST', 
+            body: JSON.stringify(formData) 
+        });
+        
+        // 성공 시 로직
+        newTransactionModal.hide();
+        transactionForm.reset();
+        expenseItemWrapper.style.display = 'none';
+        
+        toast.show("새로운 거래 내역이 성공적으로 등록되었습니다.");
+        
+        // 목록을 새로고침하여 추가된 데이터를 보여줍니다.
+        await populateTransactions(1, {});
+        await updateSummaryCards(); // 현황판도 함께 업데이트
+
+    } catch (error) { // 2. catch 블록으로 API 에러를 잡습니다.
+        // 실패 시, 서버가 보내준 에러 메시지를 toast 알림으로 사용자에게 보여줍니다.
+        // 이 메시지가 '왜' 등록이 안되는지에 대한 직접적인 힌트입니다.
+        toast.error(`등록 실패: ${error.message}`);
+        console.error("Transaction submission failed:", error);
+    }
+});
     
     transTypeSelect.addEventListener('change', () => {
         expenseItemWrapper.style.display = transTypeSelect.value === 'EXPENSE' ? 'block' : 'none';
