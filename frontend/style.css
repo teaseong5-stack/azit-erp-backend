@@ -156,42 +156,37 @@ body {
 
 /* --- Reservation Page Specific Styles (Enhanced for Premium UI) --- */
 
-/* [개선] 매출 현황 요약 카드: 시각적 안정성 및 디자인 고급화 */
+/* 매출 현황 요약 카드 */
 #category-summary-cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem; /* 카드 사이 간격 */
+    gap: 0.75rem; 
 }
-
 #category-summary-cards .card {
-    flex: 1; /* 가능한 공간을 차지하되 */
-    min-width: 140px; /* 최소 너비 유지 */
+    flex: 1; 
+    min-width: 140px; 
     color: #fff;
     border: none;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     text-align: center;
 }
-
 #category-summary-cards .card:hover {
     transform: translateY(-3px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
-
 #category-summary-cards .card-body {
-    padding: 0.75rem; /* 카드 내부 여백 조정 */
+    padding: 0.75rem; 
 }
 #category-summary-cards .card-title {
-    font-size: 0.9em; /* 텍스트 크기 조정 */
+    font-size: 0.9em; 
     font-weight: 600;
     margin-bottom: 0.25rem;
 }
 #category-summary-cards .card-text {
-    font-size: 1.1em; /* 숫자 텍스트 강조 */
+    font-size: 1.1em; 
     font-weight: 700;
 }
-
-/* 카드 배경색 적용 */
 #category-summary-cards > div:nth-child(7n+1) .card { background-color: #0d6efd; }
 #category-summary-cards > div:nth-child(7n+2) .card { background-color: #198754; }
 #category-summary-cards > div:nth-child(7n+3) .card { background-color: #ffc107; color: #343a40; }
@@ -200,45 +195,38 @@ body {
 #category-summary-cards > div:nth-child(7n+6) .card { background-color: #fd7e14; }
 #category-summary-cards > div:nth-child(7n)   .card { background-color: #0dcaf0; color: #343a40; }
 
-
-/* [개선] 테이블: 가로 스크롤을 통한 안정적인 레이아웃 및 가독성 향상 */
-/* .table-responsive는 Bootstrap 클래스로, 내용이 넘칠 경우 가로 스크롤을 자동으로 생성합니다. */
+/* 예약 목록 테이블 */
 .table-responsive {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
 }
 .table {
-    min-width: 1100px; /* 테이블 최소 너비를 지정하여 컬럼이 깨지는 현상 방지 */
-    margin-bottom: 0; /* .table-responsive 사용 시 불필요한 하단 여백 제거 */
+    min-width: 1100px; 
+    margin-bottom: 0; 
 }
-
 .table thead th {
     background-color: #f8f9fa;
     border-bottom-width: 2px;
     font-weight: 600;
     white-space: nowrap;
     vertical-align: middle;
-    padding: 0.9rem 0.75rem;
+    padding: 0.5rem 0.75rem; /* [수정] 세로 패딩 축소 */
 }
-
 .table tbody tr:hover {
     background-color: rgba(13, 110, 253, 0.05);
 }
-
 .table td {
     vertical-align: middle;
-    white-space: nowrap; /* 데이터가 한 줄로 표시되도록 유지 */
-    padding: 0.75rem;
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem; /* [수정] 세로 패딩 축소 */
 }
 
-
-/* [유지] 새 예약 등록 팝업 그리드 레이아웃 */
+/* 새 예약 등록 팝업 그리드 레이아웃 */
 #new-reservation-form-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.25rem 1.5rem;
 }
-
 #new-reservation-form-container .form-group {
     margin-bottom: 0;
 }
