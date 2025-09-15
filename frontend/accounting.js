@@ -90,39 +90,47 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    async function populateSelectOptions() {
-        const [reservationsResponse, partners] = await Promise.all([
-            window.apiFetch('reservations?page_size=10000'),
-            window.apiFetch('partners'),
-        ]);
-        const resOptions = ['<option value="">-- 예약 선택 --</option>'];
-        if (reservationsResponse && reservationsResponse.results) {
-            reservationsResponse.results.forEach(res => {
-                const customerName = res.customer ? res.customer.name : '알 수 없음';
-                resOptions.push(`<option value="${res.id}">[${res.id}] ${res.tour_name} - ${customerName}</option>`);
-            });
-        }
-        reservationSelect.innerHTML = resOptions.join('');
-        editReservationSelect.innerHTML = resOptions.join('');
-        const partnerOptions = ['<option value="">-- 제휴업체 선택 --</option>'];
-        if (partners) {
-            partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
-        }
-        partnerSelect.innerHTML = partnerOptions.join('');
-        editPartnerSelect.innerHTML = partnerOptions.join('');
-        if (user && user.is_superuser) {
-            const users = await window.apiFetch('users');
-            if (users) {
-                users.forEach(u => {
-                    const option = `<option value="${u.id}">${u.username}</option>`;
-                    managerSelect.innerHTML += option;
-                });
-            }
-        } else if (user) {
-            managerSelect.innerHTML = `<option value="${user.id}">${user.username}</option>`;
-            managerSelect.disabled = true;
-        }
+    // 이 함수 전체를 복사해서 기존의 populateSelectOptions 함수와 교체하세요.
+async function populateSelectOptions() {
+    // 1. Promise.all을 Promise.allSettled로 변경하고, users 호출도 통합합니다.
+    const results = await Promise.allSettled([
+        window.apiFetch('reservations?page_size=10000'),
+        window.apiFetch('partners'),
+        window.apiFetch('users') // 담당자(users) API 호출도 이곳으로 통합
+    ]);
+
+    // 2. 각 API 호출 결과를 안전하게 처리합니다.
+    const reservationsResponse = results[0].status === 'fulfilled' ? results[0].value : { results: [] };
+    const partners = results[1].status === 'fulfilled' ? results[1].value : [];
+    const users = results[2].status === 'fulfilled' ? results[2].value : [];
+
+    // 3. 예약 드롭다운 채우기
+    const resOptions = ['<option value="">-- 예약 선택 --</option>'];
+    reservationsResponse.results.forEach(res => {
+        const customerName = res.customer ? res.customer.name : '알 수 없음';
+        resOptions.push(`<option value="${res.id}">[${res.id}] ${res.tour_name} - ${customerName}</option>`);
+    });
+    reservationSelect.innerHTML = resOptions.join('');
+    editReservationSelect.innerHTML = resOptions.join('');
+
+    // 4. 제휴업체 드롭다운 채우기
+    const partnerOptions = ['<option value="">-- 제휴업체 선택 --</option>'];
+    partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
+    partnerSelect.innerHTML = partnerOptions.join('');
+    editPartnerSelect.innerHTML = partnerOptions.join('');
+    
+    // 5. 담당자 드롭다운 채우기 (기존 로직 유지)
+    managerSelect.innerHTML = ''; // 드롭다운 초기화
+    if (user && user.is_superuser) {
+        users.forEach(u => {
+            const option = `<option value="${u.id}">${u.username}</option>`;
+            managerSelect.innerHTML += option;
+        });
+    } else if (user) {
+        managerSelect.innerHTML = `<option value="${user.id}">${user.username}</option>`;
+        managerSelect.disabled = true;
     }
+}
 
     async function populateTransactions(page = 1, filters = {}) {
         currentFilters = filters;
