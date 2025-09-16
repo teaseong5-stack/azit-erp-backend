@@ -69,17 +69,11 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
 
-    /**
-     * 날짜 객체 또는 문자열을 'YYYY-MM-DD' 형식의 문자열로 변환합니다.
-     */
     function getLocalDateString(dateInput) {
         if (!dateInput) return new Date().toISOString().slice(0, 10);
         return new Date(dateInput).toISOString().slice(0, 10);
     }
 
-    /**
-     * 현황 요약 필터(년/월)를 초기화하고 현재 날짜로 설정합니다.
-     */
     function initializeSummaryFilters() {
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
@@ -99,9 +93,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         summaryFilterMonth.value = currentMonth;
     }
 
-    /**
-     * 카테고리별 매출 요약 현황판을 업데이트합니다.
-     */
     async function updateCategorySummary(filters = {}) {
         currentSummaryFilters = filters;
         const params = new URLSearchParams({ group_by: 'category', ...filters });
@@ -122,27 +113,11 @@ document.addEventListener("DOMContentLoaded", async function() {
             Object.entries(categoryLabels).forEach(([key, label]) => {
                 const sales = salesMap.get(key) || 0;
                 totalSales += sales;
-                const cardHtml = `
-                    <div class="col">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">${label}</h5>
-                                <p class="card-text">${sales.toLocaleString()} VND</p>
-                            </div>
-                        </div>
-                    </div>`;
+                const cardHtml = `<div class="col"><div class="card"><div class="card-body"><h5 class="card-title">${label}</h5><p class="card-text">${sales.toLocaleString()} VND</p></div></div></div>`;
                 categorySummaryCards.innerHTML += cardHtml;
             });
 
-            const totalCardHtml = `
-                <div class="col">
-                     <div class="card bg-dark text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">총 합계</h5>
-                            <p class="card-text">${totalSales.toLocaleString()} VND</p>
-                        </div>
-                    </div>
-                </div>`;
+            const totalCardHtml = `<div class="col"><div class="card bg-dark text-white"><div class="card-body"><h5 class="card-title">총 합계</h5><p class="card-text">${totalSales.toLocaleString()} VND</p></div></div></div>`;
             categorySummaryCards.innerHTML += totalCardHtml;
         } catch (error) {
             console.error("Failed to update category summary:", error);
@@ -150,10 +125,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * [수정됨] 새 예약/수정 폼의 전체 HTML 구조를 생성하여 반환합니다.
-     * 섹션별 그리드 레이아웃을 적용하여 한 줄에 여러 항목을 배치합니다.
-     */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
@@ -188,7 +159,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         return `
             <form id="${prefix}-form" class="form-section-wrapper">
-                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-group grid-col-span-2">
@@ -221,14 +191,10 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
                     </div>
                 </div>
-
-                <!-- 상세 정보 섹션 -->
                 <div class="form-section" id="${prefix}-details-container">
                     <h5 class="form-section-title">상세 정보</h5>
                     ${getCategoryFields(prefix, category, details)}
                 </div>
-
-                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-group"><label for="${prefix}-total_price" class="form-label">판매가</label><input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}"></div>
@@ -236,23 +202,16 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="form-group"><label for="${prefix}-payment_amount" class="form-label">결제금액</label><input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}"></div>
                     <div class="form-group"><label for="${prefix}-status" class="form-label fw-bold">예약 상태</label><select class="form-select" id="${prefix}-status">${statusOptions}</select></div>
                 </div>
-                
-                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
                     <div class="form-group grid-full-width"><label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label><textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea></div>
                     <div class="form-group grid-full-width"><label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label><textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea></div>
                 </div>
-                
                 ${prefix === 'new-reservation' ? '<div class="mt-3"><button type="submit" class="btn btn-primary w-100">예약 등록</button></div>' : ''}
             </form>
         `;
     }
 
-    /**
-     * [수정됨] 선택된 카테고리에 맞는 상세 정보 필드 HTML을 반환합니다.
-     * 각 필드를 .form-group으로 감싸 그리드 아이템으로 만듭니다.
-     */
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
             <div class="form-group"><label for="${prefix}-adults" class="form-label">성인</label><input type="number" class="form-control" id="${prefix}-adults" value="${details.adults || 0}"></div>
@@ -299,13 +258,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
-    // ... (기존의 다른 헬퍼 함수들은 생략 - 필요 시 추가) ...
-
     // --- 3. 핵심 로직 함수 ---
 
-    /**
-     * 모든 고객 목록을 불러와 전역 변수에 저장합니다.
-     */
     async function fetchAllCustomers() {
         try {
             const response = await window.apiFetch('customers?page_size=10000');
@@ -316,9 +270,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * 모든 사용자 목록을 불러와 전역 변수에 저장합니다. (관리자만)
-     */
     async function fetchAllUsers() {
         if (user && user.is_superuser) {
             try {
@@ -329,9 +280,9 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
         }
     }
-
+    
     /**
-     * 예약 목록을 API에서 불러와 테이블에 렌더링합니다.
+     * [수정됨] 테이블 row를 생성하는 HTML 로직을 복원합니다.
      */
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
@@ -343,23 +294,55 @@ document.addEventListener("DOMContentLoaded", async function() {
 
             if (!response || !response.results || response.results.length === 0) {
                 pageInfos.forEach(info => info.textContent = '데이터가 없습니다.');
-                // ... (기타 UI 처리)
+                prevPageButtons.forEach(btn => btn.disabled = true);
+                nextPageButtons.forEach(btn => btn.disabled = true);
+                paginationContainers.forEach(container => container.innerHTML = '');
                 reservationListTable.innerHTML = '<tr><td colspan="12" class="text-center py-5">표시할 예약 데이터가 없습니다.</td></tr>';
                 return;
             }
 
             const reservations = response.results;
-            totalPages = Math.ceil(response.count / 50);
+            const totalCount = response.count;
+            totalPages = Math.ceil(totalCount / 50);
 
             reservations.forEach(res => {
                 const row = document.createElement('tr');
-                // ... (테이블 row 생성 로직은 기존과 동일) ...
+                const margin = (res.total_price || 0) - (res.total_cost || 0);
+                const statusColors = {
+                    'PENDING': 'secondary', 'CONFIRMED': 'primary', 'PAID': 'success',
+                    'COMPLETED': 'dark', 'CANCELED': 'danger'
+                };
+                const statusColor = statusColors[res.status] || 'light';
+
+                // ▼▼▼▼▼ [수정] 누락되었던 row HTML 생성 로직 복원 ▼▼▼▼▼
+                row.innerHTML = `
+                    <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
+                    <td>${res.customer ? res.customer.name : 'N/A'}</td>
+                    <td>${res.reservation_date || 'N/A'}</td>
+                    <td>${res.start_date || '미정'}</td>
+                    <td>${res.category_display || res.category}</td>
+                    <td>${res.tour_name}</td>
+                    <td>${Number(res.total_cost).toLocaleString()} VND</td>
+                    <td>${Number(res.total_price).toLocaleString()} VND</td>
+                    <td class="${margin >= 0 ? 'text-primary' : 'text-danger'} fw-bold">${margin.toLocaleString()} VND</td>
+                    <td><span class="badge bg-${statusColor}">${res.status_display || res.status}</span></td>
+                    <td>${res.manager ? res.manager.username : 'N/A'}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${res.id}">수정</button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${res.id}" data-name="${res.tour_name}">삭제</button>
+                        </div>
+                    </td>
+                `;
+                // ▲▲▲▲▲ [수정] 누락되었던 row HTML 생성 로직 복원 ▲▲▲▲▲
                 reservationListTable.appendChild(row);
             });
 
             // 페이지네이션 정보 업데이트
-            pageInfos.forEach(info => info.textContent = `페이지 ${page} / ${totalPages}`);
-            // ... (기타 페이지네이션 UI 업데이트)
+            pageInfos.forEach(info => info.textContent = `페이지 ${page} / ${totalPages} (총 ${totalCount}건)`);
+            prevPageButtons.forEach(btn => btn.disabled = !response.previous);
+            nextPageButtons.forEach(btn => btn.disabled = !response.next);
+            // renderPagination(page, totalPages); // 상세 페이지네이션 UI가 필요하면 이 함수를 구현
 
         } catch (error) {
             console.error("Failed to populate reservations:", error);
@@ -368,25 +351,78 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
     
     // --- 4. 이벤트 리스너 설정 ---
-
+    
     /**
-     * '새 예약 등록' 모달을 열고 폼을 렌더링합니다.
+     * [신규] 동적으로 생성된 폼 내의 요소들에 이벤트 리스너를 설정하는 함수
      */
+    function setupFormEventListeners(prefix) {
+        // 카테고리 변경 시 상세 정보 UI 동적 변경
+        const categorySelect = document.getElementById(`${prefix}-category`);
+        if(categorySelect) {
+            categorySelect.addEventListener('change', () => {
+                // handleCategoryChange(prefix) 와 같은 함수를 호출하거나 로직 직접 구현
+                const detailsContainer = document.getElementById(`${prefix}-details-container`);
+                const category = categorySelect.value;
+                // getCategoryFields 함수를 다시 호출하여 상세 정보 부분만 교체
+                const newDetailsHtml = getCategoryFields(prefix, category, {});
+                detailsContainer.innerHTML = `<h5 class="form-section-title">상세 정보</h5>` + newDetailsHtml;
+            });
+        }
+
+        // 고객 검색 기능
+        const searchInput = document.getElementById(`${prefix}-customer-search`);
+        const resultsContainer = document.getElementById(`${prefix}-customer-results`);
+        const hiddenIdInput = document.getElementById(`${prefix}-customer_id`);
+        if(searchInput && resultsContainer && hiddenIdInput) {
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value.toLowerCase();
+                resultsContainer.innerHTML = '';
+                hiddenIdInput.value = '';
+                if (query.length < 1) {
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+                const filtered = allCustomers.filter(c => c.name.toLowerCase().includes(query) || (c.phone_number && c.phone_number.includes(query)));
+                if(filtered.length > 0){
+                    resultsContainer.style.display = 'block';
+                    filtered.slice(0, 10).forEach(c => {
+                        const item = document.createElement('a');
+                        item.className = 'dropdown-item';
+                        item.href = '#';
+                        item.textContent = `${c.name} (${c.phone_number || '번호없음'})`;
+                        item.onclick = (e) => {
+                            e.preventDefault();
+                            searchInput.value = item.textContent;
+                            hiddenIdInput.value = c.id;
+                            resultsContainer.style.display = 'none';
+                        };
+                        resultsContainer.appendChild(item);
+                    });
+                } else {
+                    resultsContainer.style.display = 'none';
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (e.target !== searchInput) {
+                    resultsContainer.style.display = 'none';
+                }
+            });
+        }
+    }
+
     showNewReservationModalButton.addEventListener('click', () => {
         newReservationFormContainer.innerHTML = renderFormFields('new-reservation', {});
-        // 폼 렌더링 후 이벤트 리스너(고객 검색, 카테고리 변경 등)를 설정해야 합니다.
-        // setupFormEventListeners('new-reservation');
+        // [수정] 폼이 생성된 후 이벤트 리스너를 연결합니다.
+        setupFormEventListeners('new-reservation'); 
         newReservationModalEl.show();
     });
 
-    // ... (기타 모든 이벤트 리스너들은 여기에 위치해야 합니다) ...
-    // 예: 필터 버튼, 페이지네이션 버튼, 폼 제출 등
+    // ... (기타 필터, 페이지네이션, 폼 제출 등 모든 이벤트 리스너는 여기에 위치) ...
     
     // --- 5. 페이지 초기화 실행 ---
     async function initializePage() {
         initializeSummaryFilters();
         
-        // 필수 데이터들을 병렬로 먼저 로드합니다.
         await Promise.all([
             fetchAllCustomers(),
             fetchAllUsers()
@@ -397,9 +433,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             month: new Date().getMonth() + 1
         };
         
-        // 데이터 로딩이 끝난 후 화면을 렌더링합니다.
         updateCategorySummary(initialFilters);
-        populateReservations(1, {}); // 처음에는 필터 없이 전체 목록
+        populateReservations(1, {});
     }
 
     initializePage();
