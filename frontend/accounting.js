@@ -205,16 +205,41 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
     
     function applyFilters() {
-        const filters = {
-            search: filterSearchInput.value.trim(),
-            date_after: filterStartDate.value,
-            date_before: filterEndDate.value
-        };
-        for (const key in filters) {
-            if (!filters[key]) delete filters[key];
-        }
-        populateTransactions(1, filters);
+    const filters = {
+        search: filterSearchInput.value.trim(),
+        date_after: filterStartDate.value,
+        date_before: filterEndDate.value
+    };
+    // 빈 필터 값은 제거
+    for (const key in filters) {
+        if (!filters[key]) delete filters[key];
     }
+
+    // 두 함수를 동시에 실행하여 테이블과 현황판을 함께 업데이트
+    populateTransactions(1, filters);
+    updateFilteredSummary(filters); 
+}
+	
+	async function updateFilteredSummary(filters = {}) {
+    const container = document.getElementById('filtered-summary-container');
+    // 필터가 없으면(전체 조회 시) 현황판을 숨깁니다.
+    if (Object.keys(filters).length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const params = new URLSearchParams(filters);
+    try {
+        const summary = await window.apiFetch(`transactions/summary?${params.toString()}`);
+        document.getElementById('filtered-income').textContent = `${Number(summary.total_income).toLocaleString()} VND`;
+        document.getElementById('filtered-expense').textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
+        document.getElementById('filtered-balance').textContent = `${Number(summary.balance).toLocaleString()} VND`;
+        container.style.display = 'flex'; // 숨겨뒀던 현황판을 보여줍니다.
+    } catch (error) {
+        console.error("필터링된 현황 요약 로딩 실패:", error);
+        container.style.display = 'none';
+    }
+}
 
     // --- 3. 이벤트 리스너 설정 ---
     

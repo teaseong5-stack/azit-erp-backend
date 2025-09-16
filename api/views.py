@@ -462,17 +462,35 @@ def partner_detail(request, pk):
         partner.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# --- Transaction 관련 뷰 ---
-# ... 기존 코드 ...
+# api/views.py 파일의 transaction_summary 함수를 아래 코드로 교체하세요.
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_summary(request):
     queryset = Transaction.objects.all()
     
+    # 기존 년/월 필터
     year = request.query_params.get('year')
     month = request.query_params.get('month')
     if year and month:
         queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
+    
+    # [수정] transaction_list의 상세 필터 로직 추가
+    search_query = request.query_params.get('search', None)
+    date_after = request.query_params.get('date_after', None)
+    date_before = request.query_params.get('date_before', None)
+
+    if search_query:
+        queryset = queryset.filter(
+            Q(description__icontains=search_query) |
+            Q(reservation__tour_name__icontains=search_query) |
+            Q(partner__name__icontains=search_query)
+        )
+    if date_after:
+        queryset = queryset.filter(transaction_date__gte=date_after)
+    if date_before:
+        queryset = queryset.filter(transaction_date__lte=date_before)
+
     summary = queryset.aggregate(
         total_income=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME')), Value(0), output_field=DecimalField()),
         total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField()),
