@@ -154,7 +154,7 @@ body {
     }
 }
 
-/* --- Reservation Page Specific Styles (Enhanced for Premium UI) --- */
+/* --- Reservation Page Specific Styles --- */
 
 /* 매출 현황 요약 카드 */
 #category-summary-cards {
@@ -210,7 +210,7 @@ body {
     font-weight: 600;
     white-space: nowrap;
     vertical-align: middle;
-    padding: 0.5rem 0.75rem; /* [수정] 세로 패딩 축소 */
+    padding: 0.5rem 0.75rem;
 }
 .table tbody tr:hover {
     background-color: rgba(13, 110, 253, 0.05);
@@ -218,15 +218,69 @@ body {
 .table td {
     vertical-align: middle;
     white-space: nowrap;
-    padding: 0.5rem 0.75rem; /* [수정] 세로 패딩 축소 */
+    padding: 0.5rem 0.75rem;
 }
 
-/* 새 예약 등록 팝업 그리드 레이아웃 */
-#new-reservation-form-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem 1.5rem;
+/* --- 새 예약/수정 폼 개선 (reservations.html) --- */
+
+/* 폼 전체를 감싸는 컨테이너 */
+.form-section-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* 섹션 사이의 수직 간격 */
 }
-#new-reservation-form-container .form-group {
-    margin-bottom: 0;
+
+/* 각 섹션 (기본 정보, 상세 정보 등) */
+.form-section {
+    display: grid;
+    /* 화면 너비에 따라 자동으로 컬럼 수가 조절되는 반응형 그리드 */
+    /* modal-xl (1140px) 기준 최대 4개의 컬럼이 생성됩니다. */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem 1.25rem; /* 필드 사이의 간격 (세로, 가로) */
+    align-items: end; /* 필드들의 하단 정렬을 맞춤 */
+}
+
+/* 섹션 제목 */
+.form-section-title {
+    grid-column: 1 / -1; /* 그리드의 첫 번째 열부터 마지막 열까지 모두 차지 */
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+    color: #0d6efd; /* 포인트 컬러로 강조 */
+    font-size: 1.1em;
+}
+
+/* 각 입력 필드를 감싸는 그룹 */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* 라벨과 입력창 사이의 간격 */
+}
+
+/* 특정 필드가 2칸을 차지하도록 설정 */
+.grid-col-span-2 {
+    grid-column: span 2;
+}
+
+/* 특정 필드가 그리드 전체 너비를 차지하도록 설정 (요청사항, 메모 등) */
+.grid-full-width {
+    grid-column: 1 / -1;
+}
+
+/* 고객 검색 드롭다운이 다른 요소 위에 표시되도록 설정 */
+.searchable-dropdown {
+    position: relative;
+}
+.searchable-dropdown .dropdown-content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1056; /* 모달의 z-index(1055)보다 높게 설정 */
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
