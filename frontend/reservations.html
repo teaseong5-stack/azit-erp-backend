@@ -12,22 +12,14 @@
     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
         <ul class="nav flex-column">
+            <!-- [수정] 대시보드 하위 메뉴에서 리포트 관련 메뉴 3개 제거 -->
             <li class="nav-item has-submenu">
                 <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
                 <ul class="submenu">
                     <li><a class="nav-link" href="calendar_view.html">캘린더 현황</a></li>
-                    <li><a class="nav-link" href="monthly_sales.html">월별 매출 현황</a></li>
-                    <li><a class="nav-link" href="category_sales.html">카테고리별 현황</a></li>
-                    <li><a class="nav-link" href="manager_sales.html">담당자별 현황</a></li>
                 </ul>
             </li>
-            <li class="nav-item has-submenu">
-                <a class="nav-link active" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a>
-                <ul class="submenu">
-                    <li><a class="nav-link" href="customers.html">고객 목록</a></li>
-                    <li><a class="nav-link" href="customers.html?action=new">새 고객 등록</a></li>
-                </ul>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a></li>
             <li class="nav-item has-submenu">
                 <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
                 <ul class="submenu">
@@ -36,7 +28,15 @@
                     <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
                 </ul>
             </li>
-            <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a></li>
+            <!-- [수정] 리포트 메뉴를 하위 메뉴를 갖는 구조로 변경하고, 3개 메뉴 이동 -->
+            <li class="nav-item has-submenu">
+                <a class="nav-link" href="reports.html"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>리포트</a>
+                <ul class="submenu">
+                    <li><a class="nav-link" href="monthly_sales.html">월별 매출 현황</a></li>
+                    <li><a class="nav-link" href="category_sales.html">카테고리별 현황</a></li>
+                    <li><a class="nav-link" href="manager_sales.html">담당자별 현황</a></li>
+                </ul>
+            </li>
             <li class="nav-item"><a class="nav-link" href="partners.html"><i class="bi bi-building me-2"></i>제휴업체 관리</a></li>
             <li class="nav-item has-submenu">
                 <a class="nav-link" href="accounting.html"><i class="bi bi-calculator-fill me-2"></i>회계 관리</a>
@@ -114,18 +114,19 @@
                     </div>
                 </div>
                 
-                <div class="table-responsive table-container">
+                <div class="table-responsive">
                     <table class="table table-striped table-hover table-sm">
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="select-all-checkbox" class="form-check-input"></th>
+                                <!-- [수정] 실제 데이터 순서와 일치하도록 컬럼 순서 재조정 -->
                                 <th>고객명</th>
                                 <th>예약일</th>
                                 <th>시작일</th>
                                 <th>카테고리</th>
                                 <th>상품명</th>
-                                <th>판매가</th>
                                 <th>매입가</th>
+                                <th>판매가</th>
                                 <th>마진</th>
                                 <th>상태</th>
                                 <th>담당</th>
