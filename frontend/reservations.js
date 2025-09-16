@@ -1,22 +1,15 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    // reservations.html 페이지가 아닐 경우, 스크립트 실행을 중단합니다.
+    // 해당 페이지가 아닐 경우 스크립트 실행 중단
     if (!document.getElementById('reservation-list-table')) return;
 
-    // 필수 함수(apiFetch) 존재 여부를 확인합니다.
-    if (typeof window.apiFetch !== 'function') {
-        console.error("Error: window.apiFetch is not defined. Ensure common.js is loaded correctly.");
-        toast.error("페이지 초기화에 실패했습니다. (필수 모듈 로드 실패)");
-        return;
-    }
-
     // --- 1. 전역 변수 및 HTML 요소 선언 ---
-
     let user = null;
     try {
         user = await window.apiFetch('user-info');
     } catch (error) {
-        console.error("초기화 실패 (user-info 로드 실패):", error);
-        return; // 사용자 정보 없이는 진행 불가
+        console.error("사용자 정보 로딩 실패:", error);
+        toast.error("사용자 정보를 불러오지 못했습니다. 일부 기능이 제한될 수 있습니다.");
+        return;
     }
 
     const reservationListTable = document.getElementById('reservation-list-table');
@@ -48,16 +41,16 @@ document.addEventListener("DOMContentLoaded", async function() {
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
     
-    // 기타 버튼
     const exportCsvButton = document.getElementById('export-csv-button');
+    
+    // 페이지네이션 요소
+    const prevPageButton = document.getElementById('prev-page-button');
+    const nextPageButton = document.getElementById('next-page-button');
+    const pageInfo = document.getElementById('page-info');
+    const paginationContainer = document.getElementById('pagination-container');
+
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
     const bulkDeleteButton = document.getElementById('bulk-delete-button');
-
-    // 페이지네이션 요소
-    const prevPageButtons = document.querySelectorAll('#prev-page-button');
-    const nextPageButtons = document.querySelectorAll('#next-page-button');
-    const pageInfos = document.querySelectorAll('#page-info');
-    const paginationContainers = document.querySelectorAll('#pagination-container');
 
     // 상태 관리 변수
     let currentPage = 1;
@@ -65,32 +58,48 @@ document.addEventListener("DOMContentLoaded", async function() {
     let currentFilters = {};
     let currentSummaryFilters = {};
     let allCustomers = [];
-    let allUsers = [];
+    let allUsers = []; 
 
     // --- 2. 헬퍼(Helper) 및 렌더링 함수 ---
 
     function getLocalDateString(dateInput) {
-        if (!dateInput) return new Date().toISOString().slice(0, 10);
-        return new Date(dateInput).toISOString().slice(0, 10);
+        const d = dateInput ? new Date(dateInput) : new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     function initializeSummaryFilters() {
         const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth() + 1;
-
         summaryFilterYear.innerHTML = '';
         for (let i = 0; i < 5; i++) {
             const year = currentYear - i;
             summaryFilterYear.innerHTML += `<option value="${year}">${year}년</option>`;
         }
-
         summaryFilterMonth.innerHTML = '<option value="">-- 전체 월 --</option>';
         for (let i = 1; i <= 12; i++) {
             summaryFilterMonth.innerHTML += `<option value="${i}">${i}월</option>`;
         }
-
         summaryFilterYear.value = currentYear;
-        summaryFilterMonth.value = currentMonth;
+        summaryFilterMonth.value = new Date().getMonth() + 1;
+    }
+
+    /**
+     * [수정] 현황 요약 필터 값을 기반으로 필터 객체를 생성 (일자별 검색 우선)
+     */
+    function getSummaryFiltersFromInputs() {
+        const filters = {};
+        const startDate = summaryFilterStartDate.value;
+        const endDate = summaryFilterEndDate.value;
+
+        if (startDate && endDate) {
+            filters.start_date__gte = startDate;
+            filters.start_date__lte = endDate;
+        } else {
+            filters.year = summaryFilterYear.value;
+            if (summaryFilterMonth.value) {
+                filters.month = summaryFilterMonth.value;
+            }
+        }
+        return filters;
     }
 
     async function updateCategorySummary(filters = {}) {
@@ -120,8 +129,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             const totalCardHtml = `<div class="col"><div class="card bg-dark text-white"><div class="card-body"><h5 class="card-title">총 합계</h5><p class="card-text">${totalSales.toLocaleString()} VND</p></div></div></div>`;
             categorySummaryCards.innerHTML += totalCardHtml;
         } catch (error) {
-            console.error("Failed to update category summary:", error);
-            categorySummaryCards.innerHTML = '<div class="col-12"><p class="text-danger text-center py-3">요약 정보를 불러오는데 실패했습니다.</p></div>';
+            console.error("카테고리 요약 업데이트 실패:", error);
+            toast.error("요약 정보를 불러오는데 실패했습니다.");
         }
     }
 
@@ -260,29 +269,22 @@ document.addEventListener("DOMContentLoaded", async function() {
     
     // --- 3. 핵심 로직 함수 ---
 
-    async function fetchAllCustomers() {
+    async function fetchAllInitialData() {
         try {
-            const response = await window.apiFetch('customers?page_size=10000');
-            allCustomers = response.results || [];
+            const [customers, users] = await Promise.all([
+                window.apiFetch('customers?page_size=10000'),
+                window.apiFetch('users'),
+            ]);
+            allCustomers = customers.results || [];
+            allUsers = users || [];
         } catch (error) {
-            console.error("Failed to fetch customers:", error);
-            toast.error("고객 목록 로드에 실패했습니다.");
-        }
-    }
-
-    async function fetchAllUsers() {
-        if (user && user.is_superuser) {
-            try {
-                allUsers = await window.apiFetch('users') || [];
-            } catch (error) {
-                console.error("Failed to fetch users:", error);
-                toast.error("사용자 목록 로드에 실패했습니다.");
-            }
+            console.error("초기 데이터 로딩 실패:", error);
+            toast.error("고객 또는 사용자 목록 로딩에 실패했습니다.");
         }
     }
     
     /**
-     * [수정됨] 테이블 row를 생성하는 HTML 로직을 복원합니다.
+     * [수정] 예약 목록 표시 및 수정/삭제 버튼 이벤트 리스너 연결 로직 복원
      */
     async function populateReservations(page = 1, filters = {}) {
         currentFilters = filters;
@@ -293,28 +295,20 @@ document.addEventListener("DOMContentLoaded", async function() {
             reservationListTable.innerHTML = '';
 
             if (!response || !response.results || response.results.length === 0) {
-                pageInfos.forEach(info => info.textContent = '데이터가 없습니다.');
-                prevPageButtons.forEach(btn => btn.disabled = true);
-                nextPageButtons.forEach(btn => btn.disabled = true);
-                paginationContainers.forEach(container => container.innerHTML = '');
                 reservationListTable.innerHTML = '<tr><td colspan="12" class="text-center py-5">표시할 예약 데이터가 없습니다.</td></tr>';
+                pageInfo.textContent = '데이터가 없습니다.';
+                prevPageButton.disabled = true;
+                nextPageButton.disabled = true;
                 return;
             }
 
             const reservations = response.results;
-            const totalCount = response.count;
-            totalPages = Math.ceil(totalCount / 50);
-
             reservations.forEach(res => {
                 const row = document.createElement('tr');
                 const margin = (res.total_price || 0) - (res.total_cost || 0);
-                const statusColors = {
-                    'PENDING': 'secondary', 'CONFIRMED': 'primary', 'PAID': 'success',
-                    'COMPLETED': 'dark', 'CANCELED': 'danger'
-                };
+                const statusColors = { 'PENDING': 'secondary', 'CONFIRMED': 'primary', 'PAID': 'success', 'COMPLETED': 'dark', 'CANCELED': 'danger' };
                 const statusColor = statusColors[res.status] || 'light';
 
-                // ▼▼▼▼▼ [수정] 누락되었던 row HTML 생성 로직 복원 ▼▼▼▼▼
                 row.innerHTML = `
                     <td><input type="checkbox" class="form-check-input reservation-checkbox" value="${res.id}"></td>
                     <td>${res.customer ? res.customer.name : 'N/A'}</td>
@@ -328,114 +322,131 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <td><span class="badge bg-${statusColor}">${res.status_display || res.status}</span></td>
                     <td>${res.manager ? res.manager.username : 'N/A'}</td>
                     <td>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${res.id}">수정</button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${res.id}" data-name="${res.tour_name}">삭제</button>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary edit-btn" data-id="${res.id}">수정</button>
+                            <button class="btn btn-outline-danger delete-btn" data-id="${res.id}" data-name="${res.tour_name}">삭제</button>
                         </div>
                     </td>
                 `;
-                // ▲▲▲▲▲ [수정] 누락되었던 row HTML 생성 로직 복원 ▲▲▲▲▲
                 reservationListTable.appendChild(row);
             });
-
+            
             // 페이지네이션 정보 업데이트
-            pageInfos.forEach(info => info.textContent = `페이지 ${page} / ${totalPages} (총 ${totalCount}건)`);
-            prevPageButtons.forEach(btn => btn.disabled = !response.previous);
-            nextPageButtons.forEach(btn => btn.disabled = !response.next);
-            // renderPagination(page, totalPages); // 상세 페이지네이션 UI가 필요하면 이 함수를 구현
+            const totalCount = response.count;
+            totalPages = Math.ceil(totalCount / 50);
+            currentPage = page;
+            pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
+            prevPageButton.disabled = !response.previous;
+            nextPageButton.disabled = !response.next;
 
         } catch (error) {
-            console.error("Failed to populate reservations:", error);
-            reservationListTable.innerHTML = '<tr><td colspan="12" class="text-center py-5 text-danger">예약 데이터를 불러오는데 실패했습니다.</td></tr>';
+            console.error("예약 목록 로딩 실패:", error);
+            toast.error("예약 목록을 불러오는 데 실패했습니다.");
         }
     }
     
-    // --- 4. 이벤트 리스너 설정 ---
-    
+    // --- 4. 이벤트 처리 ---
+
     /**
-     * [신규] 동적으로 생성된 폼 내의 요소들에 이벤트 리스너를 설정하는 함수
+     * [수정] 예약 목록 필터 값을 기반으로 필터 객체를 생성
      */
-    function setupFormEventListeners(prefix) {
-        // 카테고리 변경 시 상세 정보 UI 동적 변경
-        const categorySelect = document.getElementById(`${prefix}-category`);
-        if(categorySelect) {
-            categorySelect.addEventListener('change', () => {
-                // handleCategoryChange(prefix) 와 같은 함수를 호출하거나 로직 직접 구현
-                const detailsContainer = document.getElementById(`${prefix}-details-container`);
-                const category = categorySelect.value;
-                // getCategoryFields 함수를 다시 호출하여 상세 정보 부분만 교체
-                const newDetailsHtml = getCategoryFields(prefix, category, {});
-                detailsContainer.innerHTML = `<h5 class="form-section-title">상세 정보</h5>` + newDetailsHtml;
-            });
+    function getFiltersFromInputs() {
+        const filters = {
+            category: filterCategory.value,
+            search: filterSearch.value.trim(),
+            start_date__gte: filterStartDate.value,
+            start_date__lte: filterEndDate.value,
+        };
+        for (const key in filters) {
+            if (!filters[key]) delete filters[key];
         }
-
-        // 고객 검색 기능
-        const searchInput = document.getElementById(`${prefix}-customer-search`);
-        const resultsContainer = document.getElementById(`${prefix}-customer-results`);
-        const hiddenIdInput = document.getElementById(`${prefix}-customer_id`);
-        if(searchInput && resultsContainer && hiddenIdInput) {
-            searchInput.addEventListener('input', () => {
-                const query = searchInput.value.toLowerCase();
-                resultsContainer.innerHTML = '';
-                hiddenIdInput.value = '';
-                if (query.length < 1) {
-                    resultsContainer.style.display = 'none';
-                    return;
-                }
-                const filtered = allCustomers.filter(c => c.name.toLowerCase().includes(query) || (c.phone_number && c.phone_number.includes(query)));
-                if(filtered.length > 0){
-                    resultsContainer.style.display = 'block';
-                    filtered.slice(0, 10).forEach(c => {
-                        const item = document.createElement('a');
-                        item.className = 'dropdown-item';
-                        item.href = '#';
-                        item.textContent = `${c.name} (${c.phone_number || '번호없음'})`;
-                        item.onclick = (e) => {
-                            e.preventDefault();
-                            searchInput.value = item.textContent;
-                            hiddenIdInput.value = c.id;
-                            resultsContainer.style.display = 'none';
-                        };
-                        resultsContainer.appendChild(item);
-                    });
-                } else {
-                    resultsContainer.style.display = 'none';
-                }
-            });
-            document.addEventListener('click', (e) => {
-                if (e.target !== searchInput) {
-                    resultsContainer.style.display = 'none';
-                }
-            });
-        }
+        return filters;
     }
 
-    showNewReservationModalButton.addEventListener('click', () => {
-        newReservationFormContainer.innerHTML = renderFormFields('new-reservation', {});
-        // [수정] 폼이 생성된 후 이벤트 리스너를 연결합니다.
-        setupFormEventListeners('new-reservation'); 
-        newReservationModalEl.show();
+    // 현황판 '조회' 버튼
+    summaryFilterButton.addEventListener('click', () => {
+        const filters = getSummaryFiltersFromInputs();
+        updateCategorySummary(filters);
     });
 
-    // ... (기타 필터, 페이지네이션, 폼 제출 등 모든 이벤트 리스너는 여기에 위치) ...
+    // 현황판 '초기화' 버튼
+    summaryFilterReset.addEventListener('click', () => {
+        initializeSummaryFilters();
+        summaryFilterStartDate.value = '';
+        summaryFilterEndDate.value = '';
+        const filters = getSummaryFiltersFromInputs();
+        updateCategorySummary(filters);
+    });
+
+    // 예약 목록 '조회' 버튼
+    filterButton.addEventListener('click', () => {
+        const filters = getFiltersFromInputs();
+        populateReservations(1, filters);
+    });
+
+    /**
+     * [수정] 동적으로 생성된 수정/삭제 버튼에 대한 이벤트 위임 처리
+     */
+    reservationListTable.addEventListener('click', async (event) => {
+        const target = event.target;
+        const reservationId = target.dataset.id;
+
+        if (target.classList.contains('edit-btn')) {
+            openReservationModal(reservationId);
+        }
+        if (target.classList.contains('delete-btn')) {
+            const reservationName = target.dataset.name;
+            if (confirm(`[${reservationName}] 예약을 정말 삭제하시겠습니까?`)) {
+                try {
+                    await window.apiFetch(`reservations/${reservationId}`, { method: 'DELETE' });
+                    toast.show("예약이 삭제되었습니다.");
+                    populateReservations(currentPage, currentFilters);
+                    updateCategorySummary(currentSummaryFilters);
+                } catch (error) {
+                    toast.error(`삭제 실패: ${error.message}`);
+                }
+            }
+        }
+    });
     
+    /**
+     * [수정] CSV 내보내기 기능 구현
+     */
+    exportCsvButton.addEventListener('click', async () => {
+        const filters = getFiltersFromInputs();
+        const params = new URLSearchParams(filters);
+        const endpoint = `export-reservations-csv?${params.toString()}`;
+        
+        try {
+            toast.show("CSV 파일을 생성 중입니다...");
+            const blob = await window.apiFetch(endpoint, {}, true);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `reservations_${getLocalDateString()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (error) {
+            console.error("CSV 내보내기 실패:", error);
+            toast.error("CSV 파일을 다운로드하는 데 실패했습니다.");
+        }
+    });
+
+    // 페이지네이션 버튼
+    prevPageButton.addEventListener('click', () => populateReservations(currentPage - 1, currentFilters));
+    nextPageButton.addEventListener('click', () => populateReservations(currentPage + 1, currentFilters));
+
     // --- 5. 페이지 초기화 실행 ---
     async function initializePage() {
         initializeSummaryFilters();
-        
-        await Promise.all([
-            fetchAllCustomers(),
-            fetchAllUsers()
-        ]);
-        
-        const initialFilters = { 
-            year: new Date().getFullYear(),
-            month: new Date().getMonth() + 1
-        };
-        
-        updateCategorySummary(initialFilters);
-        populateReservations(1, {});
+        await fetchAllInitialData();
+        const initialSummaryFilters = getSummaryFiltersFromInputs();
+        await updateCategorySummary(initialSummaryFilters);
+        await populateReservations(1, {});
     }
-
+    
     initializePage();
 });
