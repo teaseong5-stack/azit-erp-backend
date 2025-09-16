@@ -89,7 +89,7 @@ async function refreshToken() {
 }
 
 /**
- * API 호출을 위한 공통 Fetch 함수입니다. (자동 토큰 갱신 및 캐시 비활성화 기능 포함)
+ * API 호출을 위한 공통 Fetch 함수입니다. (자동 토큰 갱신, 캐시 비활성화, URL 슬래시 보정 기능 포함)
  */
 window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     async function executeFetch(isRetry = false) {
@@ -106,16 +106,25 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
         }
 
         const config = { ...options, headers };
-        const url = `${window.ERP_CONFIG.API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
+
+        // ==================================================================
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 부분이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        // URL을 조립할 때 경로 끝에 항상 슬래시(/)가 있도록 보장하는 로직
+        const cleanedBase = window.ERP_CONFIG.API_BASE_URL.replace(/\/$/, '');
+        const [path, queryString] = endpoint.split('?');
+        const cleanedPath = path.replace(/^\//, '');
+        
+        // 경로 끝이 슬래시로 끝나지 않으면 슬래시를 추가합니다.
+        const formattedPath = cleanedPath.endsWith('/') ? cleanedPath : `${cleanedPath}/`;
+
+        const finalEndpoint = queryString ? `${formattedPath}?${queryString}` : formattedPath;
+        const url = `${cleanedBase}/${finalEndpoint}`;
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 이 부분이 수정되었습니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        // ==================================================================
 
         try {
-            // ==================================================================
-            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 부분이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-            // cache: 'no-cache' 옵션을 추가하여 항상 최신 데이터를 요청합니다.
             const finalConfig = { ...config, cache: 'no-cache' };
             const response = await fetch(url, finalConfig);
-            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 이 부분이 수정되었습니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-            // ==================================================================
 
             if (response.status === 401 && !isRetry) {
                 console.log("Access token expired. Attempting to refresh...");

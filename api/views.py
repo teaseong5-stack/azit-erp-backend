@@ -486,13 +486,12 @@ def transaction_summary(request):
     summary['balance'] = summary['total_income'] - summary['total_expense']
     return Response(summary)
 
-# views.py 파일의 transaction_list 함수를 아래 코드로 교체하세요.
+# api/views.py 파일의 transaction_list 함수를 이 코드로 되돌려주세요.
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list(request):
     if request.method == 'GET':
-        # ... (기존 GET 로직은 동일) ...
         base_queryset = Transaction.objects.select_related('reservation__customer', 'partner', 'manager')
         queryset = base_queryset.all()
         
@@ -514,31 +513,13 @@ def transaction_list(request):
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-transaction_date'), request)
         serializer = TransactionSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
-
-    # ==================== [수정된 POST 로직] ====================
+        
     elif request.method == 'POST':
         serializer = TransactionSerializer(data=request.data)
-        try:
-            # raise_exception=True 옵션으로 유효성 검사 실패 시 즉시 예외 발생
-            if serializer.is_valid(raise_exception=True):
-                # manager는 로그인한 사용자로 강제 할당
-                serializer.save(manager=request.user)
-                # 성공 시 201 상태 코드와 함께 저장된 데이터 반환
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        # 모든 종류의 예외를 잡아서 서버 로그에 출력하고, 500 에러로 반환
-        except Exception as e:
-            # ▼▼▼▼▼ 이 부분이 가장 중요합니다 ▼▼▼▼▼
-            print(f"!!! TRANSACTION SAVE FAILED !!!")
-            print(f"ERROR: {str(e)}")
-            print(f"INCOMING DATA: {request.data}")
-            # ▲▲▲▲▲ 이 부분이 가장 중요합니다 ▲▲▲▲▲
-            
-            # 프론트엔드에 명확한 500 에러와 상세 내용을 반환
-            return Response(
-                {"error": "서버 내부 오류로 데이터 저장에 실패했습니다.", "details": str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        if serializer.is_valid():
+            serializer.save(manager=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAdminUser])
