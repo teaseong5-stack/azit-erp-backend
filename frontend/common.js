@@ -23,7 +23,7 @@ window.toast = {
                 gravity: "top", // `top` or `bottom`
                 position: "right", // `left`, `center` or `right`
                 backgroundColor: backgroundColor,
-                stopOnFocus: true, 
+                stopOnFocus: true,
             }).showToast();
         }
     },
@@ -49,11 +49,7 @@ let isRefreshing = false;
  * 만료된 Access Token을 자동으로 갱신합니다.
  */
 async function refreshToken() {
-    if (isRefreshing) {
-        // 이미 갱신 중이면 추가 요청을 보내지 않고 대기합니다.
-        // 실제 구현에서는 Promise를 반환하여 대기 후 재시도하는 방식이 더 좋습니다.
-        return; 
-    }
+    if (isRefreshing) return;
     isRefreshing = true;
 
     const refreshToken = localStorage.getItem('refreshToken');
@@ -75,18 +71,15 @@ async function refreshToken() {
 
         const data = await response.json();
         localStorage.setItem('accessToken', data.access);
-        
-        // 백엔드가 새 refresh 토큰을 반환하는 경우 (선택적)
         if (data.refresh) {
             localStorage.setItem('refreshToken', data.refresh);
         }
 
         isRefreshing = false;
-        return data.access; // 새 access token 반환
+        return data.access;
 
     } catch (error) {
         console.error("Token refresh error:", error);
-        // 토큰 갱신 실패 시, 모든 인증 정보를 지우고 로그아웃 처리합니다.
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         window.location.href = 'index.html';
@@ -96,15 +89,13 @@ async function refreshToken() {
 }
 
 /**
- * API 호출을 위한 공통 Fetch 함수입니다. (자동 토큰 갱신 기능 포함)
+ * API 호출을 위한 공통 Fetch 함수입니다. (자동 토큰 갱신 및 캐시 비활성화 기능 포함)
  */
 window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
     async function executeFetch(isRetry = false) {
         const accessToken = localStorage.getItem('accessToken');
         if (!accessToken) {
-            // 재시도 중에도 토큰이 없으면 인증 오류로 처리
             if (isRetry) throw new Error("Authentication failed after retry.");
-            // 첫 시도에 토큰이 없으면 로그인 페이지로
             window.location.href = 'index.html';
             throw new Error("No access token found.");
         }
@@ -118,43 +109,43 @@ window.apiFetch = async function(endpoint, options = {}, isBlob = false) {
         const url = `${window.ERP_CONFIG.API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
 
         try {
-            const response = await fetch(url, config);
+            // ==================================================================
+            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 부분이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+            // cache: 'no-cache' 옵션을 추가하여 항상 최신 데이터를 요청합니다.
+            const finalConfig = { ...config, cache: 'no-cache' };
+            const response = await fetch(url, finalConfig);
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 이 부분이 수정되었습니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+            // ==================================================================
 
             if (response.status === 401 && !isRetry) {
-                // 401 오류 발생 시, 토큰 갱신 후 원래 요청을 재시도 (단 한 번만)
                 console.log("Access token expired. Attempting to refresh...");
                 await refreshToken();
-                return await executeFetch(true); // 재시도 플래그를 true로 설정하여 다시 실행
+                return await executeFetch(true);
             }
 
             if (response.status === 204) {
                 return { success: true };
             }
-            
+
             if (!response.ok) {
-                // 기타 HTTP 오류 처리
                 const errorBody = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
                 const errorMessage = errorBody.detail || JSON.stringify(errorBody);
                 throw new Error(errorMessage);
             }
-            
-            // 성공 처리
+
             return isBlob ? await response.blob() : await response.json();
 
         } catch (error) {
-            // 네트워크 오류 또는 위에서 발생시킨 예외를 최종적으로 처리
             console.error(`API Fetch Error on ${endpoint}:`, error);
-            // refreshToken 함수에서 이미 리디렉션 처리한 경우는 제외
             if (error.message !== "Failed to refresh token.") {
                 toast.error(error.message || "서버 통신 중 오류가 발생했습니다.");
             }
-            throw error; // 호출자에게 오류 전파
+            throw error;
         }
     }
 
     return await executeFetch();
 };
-
 
 // --- 5. 공통 이벤트 리스너 ---
 window.addEventListener('load', () => {
