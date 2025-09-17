@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     const productInput = document.getElementById('filter-product');
     const managerSelect = document.getElementById('filter-manager');
     const filterButton = document.getElementById('filter-button');
-    const resetButton = document.getElementById('reset-button'); // [추가] 초기화 버튼
+    const resetButton = document.getElementById('reset-button');
     const pageInfo = document.getElementById('page-info');
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
@@ -18,13 +18,19 @@ document.addEventListener("DOMContentLoaded", async function() {
     const summaryTotalCost = document.getElementById('summary-total-cost');
     const summaryTotalMargin = document.getElementById('summary-total-margin');
     const summaryManagerCounts = document.getElementById('summary-manager-counts');
+    
+    // 상세 정보 팝업(모달) 요소
+    const detailModalEl = new bootstrap.Modal(document.getElementById('reportDetailModal'));
+    const detailModalTitle = document.getElementById('report-detail-title');
+    const detailModalBody = document.getElementById('report-detail-body');
+
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
+    let allReservations = []; // 필터링된 전체 예약을 저장할 변수
 
     // --- 2. 데이터 로딩 및 렌더링 함수 ---
     async function initializeFilters() {
-        // 년/월 드롭다운 채우기
         const currentYear = new Date().getFullYear();
         yearSelect.innerHTML = '<option value="">전체</option>';
         for (let i = 0; i < 5; i++) {
@@ -35,8 +41,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         for (let i = 1; i <= 12; i++) {
             monthSelect.innerHTML += `<option value="${i}">${i}월</option>`;
         }
-        
-        // 담당자 드롭다운 채우기
         managerSelect.innerHTML = '<option value="">전체</option>';
         try {
             const users = await window.apiFetch('users');
@@ -66,7 +70,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                 summaryData.manager_counts.forEach(item => {
                     const listItem = document.createElement('li');
                     listItem.className = 'd-flex justify-content-between';
-                    listItem.innerHTML = `<span>${item.manager__username || '미지정'}</span> <strong>${item.count}건</strong>`;
+                    listItem.innerHTML = `
+                        <a href="#" class="manager-detail-link" data-manager-name="${item.manager__username || '미지정'}">
+                            ${item.manager__username || '미지정'}
+                        </a> 
+                        <strong>${item.count}건</strong>`;
                     list.appendChild(listItem);
                 });
                 summaryManagerCounts.appendChild(list);
@@ -82,13 +90,20 @@ document.addEventListener("DOMContentLoaded", async function() {
     async function fetchReportData(page = 1, filters = {}) {
         currentFilters = filters;
         const params = new URLSearchParams({ page, ...filters });
-        const endpoint = `reservations?${params.toString()}`;
+        const paginatedEndpoint = `reservations?${params.toString()}`;
+        params.delete('page');
+        const allEndpoint = `reservations/all?${params.toString()}`;
 
         try {
-            const response = await window.apiFetch(endpoint);
+            const [paginatedResponse, allResponse] = await Promise.all([
+                window.apiFetch(paginatedEndpoint),
+                window.apiFetch(allEndpoint)
+            ]);
+            
+            allReservations = allResponse.results || []; 
             tableBody.innerHTML = '';
 
-            if (!response || !response.results || response.results.length === 0) {
+            if (!paginatedResponse || !paginatedResponse.results || paginatedResponse.results.length === 0) {
                 pageInfo.textContent = '데이터가 없습니다.';
                 prevPageButton.disabled = true;
                 nextPageButton.disabled = true;
@@ -96,28 +111,28 @@ document.addEventListener("DOMContentLoaded", async function() {
                 return;
             }
 
-            const reservations = response.results;
-            const totalCount = response.count;
+            const reservations = paginatedResponse.results;
+            const totalCount = paginatedResponse.count;
             totalPages = Math.ceil(totalCount / 50);
 
             reservations.forEach(res => {
                 const row = tableBody.insertRow();
                 const margin = (res.total_price || 0) - (res.total_cost || 0);
                 row.innerHTML = `
-                    <td>${res.category_display || 'N/A'}</td>
+                    <td><a href="#" class="category-detail-link" data-category="${res.category}">${res.category_display || 'N/A'}</a></td>
                     <td>${res.tour_name}</td>
                     <td>${res.customer ? res.customer.name : 'N/A'}</td>
                     <td>${Number(res.total_price).toLocaleString()} VND</td>
                     <td>${Number(res.total_cost).toLocaleString()} VND</td>
                     <td class="fw-bold ${margin >= 0 ? 'text-primary' : 'text-danger'}">${Number(margin).toLocaleString()} VND</td>
-                    <td>${res.manager ? res.manager.username : 'N/A'}</td>
+                    <td><a href="#" class="manager-detail-link" data-manager-name="${res.manager ? res.manager.username : '미지정'}">${res.manager ? res.manager.username : '미지정'}</a></td>
                 `;
             });
             
             currentPage = page;
             pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
-            prevPageButton.disabled = !response.previous;
-            nextPageButton.disabled = !response.next;
+            prevPageButton.disabled = !paginatedResponse.previous;
+            nextPageButton.disabled = !paginatedResponse.next;
         } catch (error) {
             console.error("리포트 데이터 로딩 실패:", error);
             toast.error("데이터를 불러오는 데 실패했습니다.");
@@ -125,9 +140,62 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
+    function showDetailPopup(type, value) {
+        let title = '';
+        let headers = [];
+        let rows = [];
+        const dataMap = new Map();
+
+        if (type === 'manager') {
+            title = `${value} 담당 상세 실적`;
+            headers = ['카테고리', '매출액 (VND)', '건수'];
+            const filtered = allReservations.filter(r => (r.manager ? r.manager.username : '미지정') === value);
+            
+            filtered.forEach(r => {
+                const key = r.category_display || '기타';
+                const current = dataMap.get(key) || { sales: 0, count: 0 };
+                current.sales += Number(r.total_price);
+                current.count += 1;
+                dataMap.set(key, current);
+            });
+            
+            rows = Array.from(dataMap, ([key, val]) => `<tr><td>${key}</td><td>${val.sales.toLocaleString()}</td><td>${val.count}</td></tr>`);
+
+        } else { // category
+            const categoryName = allReservations.find(r => r.category === value)?.category_display || value;
+            title = `${categoryName} 카테고리 상세 실적`;
+            headers = ['담당자', '매출액 (VND)', '건수'];
+            const filtered = allReservations.filter(r => r.category === value);
+            
+            filtered.forEach(r => {
+                const key = r.manager ? r.manager.username : '미지정';
+                const current = dataMap.get(key) || { sales: 0, count: 0 };
+                current.sales += Number(r.total_price);
+                current.count += 1;
+                dataMap.set(key, current);
+            });
+
+            rows = Array.from(dataMap, ([key, val]) => `<tr><td>${key}</td><td>${val.sales.toLocaleString()}</td><td>${val.count}</td></tr>`);
+        }
+        
+        detailModalTitle.textContent = title;
+        detailModalBody.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${rows.join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        detailModalEl.show();
+    }
+
     // --- 3. 이벤트 처리 함수 ---
     function applyFilters() {
-        // [수정] 복잡한 날짜 계산 로직을 제거하고, 년/월 값을 그대로 사용합니다.
         const filters = {
             year: yearSelect.value,
             month: monthSelect.value,
@@ -135,11 +203,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             search: productInput.value.trim(),
             manager: managerSelect.value,
         };
-        // 빈 필터 값은 파라미터에서 제외
         for (const key in filters) {
-            if (!filters[key]) {
-                delete filters[key];
-            }
+            if (!filters[key]) delete filters[key];
         }
         fetchReportData(1, filters);
         fetchSummaryData(filters);
@@ -151,29 +216,38 @@ document.addEventListener("DOMContentLoaded", async function() {
         categorySelect.value = '';
         productInput.value = '';
         managerSelect.value = '';
-        applyFilters(); // 필터를 초기화한 후 다시 조회
+        applyFilters();
     }
 
     // --- 4. 이벤트 리스너 설정 ---
     filterButton.addEventListener('click', applyFilters);
-    resetButton.addEventListener('click', resetFilters); // [추가] 초기화 버튼 이벤트
+    resetButton.addEventListener('click', resetFilters);
     
     prevPageButton.addEventListener('click', () => {
-        if (currentPage > 1) {
-            fetchReportData(currentPage - 1, currentFilters);
-        }
+        if (currentPage > 1) fetchReportData(currentPage - 1, currentFilters);
     });
 
     nextPageButton.addEventListener('click', () => {
-        if (currentPage < totalPages) {
-            fetchReportData(currentPage + 1, currentFilters);
+        if (currentPage < totalPages) fetchReportData(currentPage + 1, currentFilters);
+    });
+
+    document.querySelector('.content').addEventListener('click', function(event) {
+        if (event.target.classList.contains('manager-detail-link')) {
+            event.preventDefault();
+            const managerName = event.target.dataset.managerName;
+            showDetailPopup('manager', managerName);
+        }
+        if (event.target.classList.contains('category-detail-link')) {
+            event.preventDefault();
+            const category = event.target.dataset.category;
+            showDetailPopup('category', category);
         }
     });
 
     // --- 5. 페이지 초기화 ---
     async function initializePage() {
         await initializeFilters();
-        applyFilters(); // 초기 로드 시 전체 데이터 조회
+        applyFilters();
     }
 
     initializePage();
