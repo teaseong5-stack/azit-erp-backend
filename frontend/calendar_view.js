@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     const detailFilter = document.getElementById('detail-filter');
     const detailModal = new bootstrap.Modal(document.getElementById('reservationDetailModal'));
     const modalBodyContent = document.getElementById('modal-body-content');
+    const modalTitle = document.querySelector('#reservationDetailModal .modal-title');
     
     let calendar = null;
     let allReservations = []; // 전체 예약 데이터 저장
@@ -21,15 +22,25 @@ document.addEventListener("DOMContentLoaded", async function() {
         'TICKET': { label: '티켓', color: '#ff9f40' },
         'OTHER': { label: '기타', color: '#808080' }
     };
+    
+    // [추가] 예약 및 결제 상태에 대한 정보 객체
+    const statusInfo = { 
+        'PENDING': { label: '상담중', color: 'secondary' }, 
+        'CONFIRMED': { label: '예약확정', color: 'primary' }, 
+        'PAID': { label: '잔금완료', color: 'success' }, 
+        'COMPLETED': { label: '여행완료', color: 'dark' }, 
+        'CANCELED': { label: '취소', color: 'danger' } 
+    };
+    const paymentStatusInfo = {
+        'UNPAID': { label: '미결제', color: 'danger' },
+        'DEPOSIT': { label: '예약금 입금', color: 'info' },
+        'PAID': { label: '결제완료', color: 'success' }
+    };
 
     // --- 2. 데이터 처리 및 캘린더 렌더링 함수 ---
 
-    /**
-     * 예약 데이터를 FullCalendar의 '이벤트' 형식으로 변환합니다.
-     */
     function formatEvents(reservations) {
         return reservations.map(res => {
-            // end 날짜는 FullCalendar의 'exclusive' 특성 때문에 하루를 더해줘야 합니다.
             let endDate = res.end_date ? new Date(res.end_date) : new Date(res.start_date);
             endDate.setDate(endDate.getDate() + 1);
 
@@ -40,21 +51,16 @@ document.addEventListener("DOMContentLoaded", async function() {
                 end: endDate.toISOString().split('T')[0],
                 backgroundColor: categoryInfo[res.category]?.color || categoryInfo['OTHER'].color,
                 borderColor: categoryInfo[res.category]?.color || categoryInfo['OTHER'].color,
-                extendedProps: { reservation: res } // 원본 데이터를 저장하여 툴팁/모달에서 사용
+                extendedProps: { reservation: res }
             };
         });
     }
 
-    /**
-     * 필터 조건에 따라 캘린더 이벤트를 업데이트합니다.
-     */
     function filterAndRenderEvents() {
         const groupValue = groupFilter.value;
         const detailValue = detailFilter.value;
-
         let filteredReservations = allReservations;
 
-        // 상세 필터 값이 있을 경우에만 필터링 수행
         if (groupValue === 'manager' && detailValue) {
             filteredReservations = allReservations.filter(res => 
                 (res.manager ? String(res.manager.id) : 'unassigned') === detailValue
@@ -67,9 +73,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         calendar.addEventSource(formatEvents(filteredReservations));
     }
     
-    /**
-     * 상세 필터 드롭다운을 채우고 표시 상태를 조절합니다.
-     */
     function updateDetailFilter() {
         const groupValue = groupFilter.value;
         
@@ -91,7 +94,33 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
             detailFilter.innerHTML = optionsHtml;
         }
-        filterAndRenderEvents(); // 그룹 기준 변경 시에도 필터링 즉시 적용
+        filterAndRenderEvents();
+    }
+
+    function formatReservationDetails(details) {
+        if (!details || Object.keys(details).length === 0) {
+            return '<p class="text-muted">추가 상세 정보 없음</p>';
+        }
+        const detailLabels = {
+            adults: '성인', children: '아동', infants: '유아',
+            startTime: '시작 시간', pickupLocation: '픽업 장소', dropoffLocation: '샌딩 장소',
+            carType: '차량 종류', usageHours: '이용 시간',
+            roomType: '방 종류', nights: '숙박일수', roomCount: '룸 수량', guests: '총 인원',
+            teeOffTime: '티오프', players: '플레이어 수',
+            usageTime: '이용 시간'
+        };
+        let html = '<ul class="list-group list-group-flush">';
+        for (const [key, value] of Object.entries(details)) {
+            if (value) {
+                const label = detailLabels[key] || key;
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center ps-0">
+                            ${label}
+                            <span class="badge bg-secondary rounded-pill">${value}</span>
+                         </li>`;
+            }
+        }
+        html += '</ul>';
+        return html;
     }
 
     // --- 3. 캘린더 초기화 ---
@@ -105,19 +134,17 @@ document.addEventListener("DOMContentLoaded", async function() {
                 right: 'dayGridMonth,timeGridWeek,listWeek'
             },
             locale: 'ko',
-            height: 'auto', // 부모 요소 높이에 맞춤
+            height: 'auto',
             editable: false,
             
-            // 마우스 오버 시 툴팁 표시
             eventMouseEnter: function(info) {
                 const res = info.event.extendedProps.reservation;
                 const content = `
                     <strong>${res.tour_name}</strong><br>
                     고객: ${res.customer ? res.customer.name : 'N/A'}<br>
                     담당자: ${res.manager ? res.manager.username : '미지정'}<br>
-                    상태: ${res.status_display}
+                    상태: ${statusInfo[res.status]?.label || res.status}
                 `;
-                // Tippy.js 인스턴스를 요소에 저장하여 중복 생성을 방지
                 if (!info.el._tippy) {
                     info.el._tippy = tippy(info.el, { 
                         content, 
@@ -129,27 +156,55 @@ document.addEventListener("DOMContentLoaded", async function() {
                 info.el._tippy.show();
             },
             eventMouseLeave: function(info) {
-                if (info.el._tippy) {
-                    info.el._tippy.hide(); // 즉시 숨김
-                }
+                if (info.el._tippy) info.el._tippy.hide();
             },
-            // 이벤트 클릭 시 상세 모달 표시
+            
+            /**
+             * [수정] payment_status와 special_notes를 포함하여 모달 내용을 최종 강화합니다.
+             */
             eventClick: function(info) {
                 const res = info.event.extendedProps.reservation;
                 if (res) {
                     const customerName = res.customer ? res.customer.name : '고객 미지정';
                     const customerPhone = res.customer ? res.customer.phone_number : '정보 없음';
+                    const currentStatus = statusInfo[res.status] || { label: res.status, color: 'secondary' };
+                    const currentPaymentStatus = paymentStatusInfo[res.payment_status] || { label: res.payment_status, color: 'secondary' };
+
+                    modalTitle.innerHTML = `[${res.id}] ${res.tour_name}`;
+
                     modalBodyContent.innerHTML = `
-                        <h5>${res.tour_name}</h5>
-                        <p><strong>고객:</strong> ${customerName} (${customerPhone})</p>
-                        <p><strong>담당자:</strong> ${res.manager ? res.manager.username : '미지정'}</p>
-                        <p><strong>기간:</strong> ${res.start_date || ''} ~ ${res.end_date || ''}</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>기본 정보</h5>
+                                <ul class="list-unstyled">
+                                    <li><strong>고객:</strong> ${customerName} (${customerPhone})</li>
+                                    <li><strong>담당자:</strong> ${res.manager ? res.manager.username : '미지정'}</li>
+                                    <li><strong>기간:</strong> ${res.start_date || ''} ~ ${res.end_date || ''}</li>
+                                    <li><strong>예약일:</strong> ${res.reservation_date || 'N/A'}</li>
+                                    <li><strong>예약 상태:</strong> <span class="badge bg-${currentStatus.color}">${currentStatus.label}</span></li>
+                                    <li><strong>결제 상태:</strong> <span class="badge bg-${currentPaymentStatus.color}">${currentPaymentStatus.label}</span></li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>금액 정보</h5>
+                                <ul class="list-unstyled">
+                                    <li><strong>판매가:</strong> ${Number(res.total_price).toLocaleString()} VND</li>
+                                    <li><strong>원가:</strong> ${Number(res.total_cost).toLocaleString()} VND</li>
+                                    <li><strong>결제금액:</strong> ${Number(res.payment_amount).toLocaleString()} VND</li>
+                                    <li><strong>마진:</strong> <span class="fw-bold ${res.total_price - res.total_cost >= 0 ? 'text-primary' : 'text-danger'}">${(res.total_price - res.total_cost).toLocaleString()} VND</span></li>
+                                </ul>
+                            </div>
+                        </div>
                         <hr>
-                        <p><strong>판매가:</strong> ${Number(res.total_price).toLocaleString()} VND</p>
-                        <p><strong>원가:</strong> ${Number(res.total_cost).toLocaleString()} VND</p>
+                        <h5>카테고리 상세</h5>
+                        ${formatReservationDetails(res.details)}
                         <hr>
-                        <h6>요청사항</h6>
-                        <p class="bg-light p-2 rounded">${res.requests || '없음'}</p>
+                        <h6>요청사항 (고객)</h6>
+                        <p class="bg-light p-2 rounded small">${res.requests || '없음'}</p>
+                        <h6>특이사항</h6>
+                        <p class="bg-light p-2 rounded small">${res.special_notes || '없음'}</p>
+                        <h6>내부 메모</h6>
+                        <p class="bg-light p-2 rounded small">${res.notes || '없음'}</p>
                     `;
                     detailModal.show();
                 }
@@ -163,7 +218,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     async function initializePage() {
         initializeCalendar();
         try {
-            // 예약 정보와 사용자 정보를 동시에 병렬로 불러옵니다.
             const [reservationResponse, usersResponse] = await Promise.all([
                 window.apiFetch('reservations/all/'),
                 window.apiFetch('users')
@@ -172,7 +226,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             allReservations = reservationResponse?.results || [];
             allUsers = usersResponse || [];
             
-            filterAndRenderEvents(); // 초기 데이터로 캘린더 채우기
+            filterAndRenderEvents();
             
         } catch (error) {
             console.error("캘린더 데이터 로딩 실패:", error);
@@ -180,7 +234,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // 필터 변경 시 캘린더 업데이트
     groupFilter.addEventListener('change', updateDetailFilter);
     detailFilter.addEventListener('change', filterAndRenderEvents);
 
