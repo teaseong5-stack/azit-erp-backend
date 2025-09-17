@@ -120,12 +120,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // =======================================================================
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 생략되었던 함수들 복원 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-    // =======================================================================
-
     /**
-     * 선택된 카테고리에 맞는 상세 정보 필드 HTML을 반환합니다.
+     * [수정] 카테고리별 상세 정보 필드 HTML을 3열 그리드에 맞게 반환합니다.
      */
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
@@ -149,11 +145,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
                     </div>
-                    <div class="form-group grid-span-2">
+                    <div class="form-group">
                         <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
                         <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
-                    <div class="form-group grid-span-2">
+                    <div class="form-group">
                         <label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label>
                         <input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}">
                     </div>
@@ -187,10 +183,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="form-group">
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
-                    </div>
-                    <div class="form-group grid-span-2">
-                        <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
-                        <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
                     ${commonFields}
                 `;
@@ -234,12 +226,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                     ${commonFields}
                 `;
             default:
-                return '<div class="grid-full-width"><p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p></div>';
+                return '<p class="text-muted grid-span-3">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
         }
     }
 
     /**
-     * 신규/수정 폼의 전체 HTML 구조를 생성하여 반환합니다.
+     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 재구성합니다.
      */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
@@ -263,89 +255,99 @@ document.addEventListener("DOMContentLoaded", async function() {
             </div>`;
 
         return `
-            <form id="${prefix}-form">
+            <form id="${prefix}-form" class="reservation-form-layout">
+                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
-                    <div class="form-group grid-span-2">
-                        <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
-                        <div class="searchable-dropdown">
-                            <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
-                            <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
-                            <div class="dropdown-content" id="${prefix}-customer-results"></div>
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
+                            <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
+                            <div class="searchable-dropdown">
+                                <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
+                                <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
+                                <div class="dropdown-content" id="${prefix}-customer-results"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-category" class="form-label fw-bold">카테고리</label>
-                        <select class="form-select" id="${prefix}-category">
-                            <option value="TOUR" ${category === 'TOUR' ? 'selected' : ''}>투어</option>
-                            <option value="RENTAL_CAR" ${category === 'RENTAL_CAR' ? 'selected' : ''}>렌터카</option>
-                            <option value="ACCOMMODATION" ${category === 'ACCOMMODATION' ? 'selected' : ''}>숙박</option>
-                            <option value="GOLF" ${category === 'GOLF' ? 'selected' : ''}>골프</option>
-                            <option value="TICKET" ${category === 'TICKET' ? 'selected' : ''}>티켓</option>
-                            <option value="OTHER" ${category === 'OTHER' ? 'selected' : ''}>기타</option>
-                        </select>
-                    </div>
-                    <div class="form-group grid-span-2">
-                        <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
-                        <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-reservation_date" class="form-label">예약일</label>
-                        <input type="date" class="form-control" id="${prefix}-reservation_date" value="${data.reservation_date || getLocalDateString()}">
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-start_date" class="form-label">${currentLabels.startDate}</label>
-                        <input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-end_date" class="form-label">${currentLabels.endDate}</label>
-                        <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
+                        <div class="form-group">
+                            <label for="${prefix}-category" class="form-label fw-bold">카테고리</label>
+                            <select class="form-select" id="${prefix}-category">
+                                <option value="TOUR" ${category === 'TOUR' ? 'selected' : ''}>투어</option>
+                                <option value="RENTAL_CAR" ${category === 'RENTAL_CAR' ? 'selected' : ''}>렌터카</option>
+                                <option value="ACCOMMODATION" ${category === 'ACCOMMODATION' ? 'selected' : ''}>숙박</option>
+                                <option value="GOLF" ${category === 'GOLF' ? 'selected' : ''}>골프</option>
+                                <option value="TICKET" ${category === 'TICKET' ? 'selected' : ''}>티켓</option>
+                                <option value="OTHER" ${category === 'OTHER' ? 'selected' : ''}>기타</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
+                            <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-reservation_date" class="form-label">예약일</label>
+                            <input type="date" class="form-control" id="${prefix}-reservation_date" value="${data.reservation_date || getLocalDateString()}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-start_date" class="form-label">${currentLabels.startDate}</label>
+                            <input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-end_date" class="form-label">${currentLabels.endDate}</label>
+                            <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
+                        </div>
                     </div>
                 </div>
 
+                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
-                    <div class="form-grid" id="${prefix}-details-container">
+                    <div class="form-grid form-grid--3-col" id="${prefix}-details-container">
                         ${getCategoryFields(prefix, category, details)}
                     </div>
                 </div>
 
+                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
-                    <div class="form-group">
-                        <label for="${prefix}-total_price" class="form-label">판매가</label>
-                        <input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}">
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
+                            <label for="${prefix}-total_price" class="form-label">판매가</label>
+                            <input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-total_cost" class="form-label">원가</label>
+                            <input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}">
+                        </div>
+                         <div class="form-group">
+                            <label for="${prefix}-payment_amount" class="form-label">결제금액</label>
+                            <input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-status" class="form-label fw-bold">예약 상태</label>
+                            <select class="form-select" id="${prefix}-status">
+                                <option value="PENDING" ${data.status === 'PENDING' ? 'selected' : ''}>상담중</option>
+                                <option value="CONFIRMED" ${data.status === 'CONFIRMED' ? 'selected' : ''}>예약확정</option>
+                                <option value="PAID" ${data.status === 'PAID' ? 'selected' : ''}>잔금완료</option>
+                                <option value="COMPLETED" ${data.status === 'COMPLETED' ? 'selected' : ''}>여행완료</option>
+                                <option value="CANCELED" ${data.status === 'CANCELED' ? 'selected' : ''}>취소</option>
+                            </select>
+                        </div>
+                        ${managerFieldHtml}
                     </div>
-                    <div class="form-group">
-                        <label for="${prefix}-total_cost" class="form-label">원가</label>
-                        <input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}">
-                    </div>
-                     <div class="form-group">
-                        <label for="${prefix}-payment_amount" class="form-label">결제금액</label>
-                        <input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}">
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-status" class="form-label fw-bold">예약 상태</label>
-                        <select class="form-select" id="${prefix}-status">
-                            <option value="PENDING" ${data.status === 'PENDING' ? 'selected' : ''}>상담중</option>
-                            <option value="CONFIRMED" ${data.status === 'CONFIRMED' ? 'selected' : ''}>예약확정</option>
-                            <option value="PAID" ${data.status === 'PAID' ? 'selected' : ''}>잔금완료</option>
-                            <option value="COMPLETED" ${data.status === 'COMPLETED' ? 'selected' : ''}>여행완료</option>
-                            <option value="CANCELED" ${data.status === 'CANCELED' ? 'selected' : ''}>취소</option>
-                        </select>
-                    </div>
-                    ${managerFieldHtml}
                 </div>
                 
+                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
-                    <div class="form-group grid-full-width">
-                        <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
-                        <textarea class="form-control" id="${prefix}-requests" rows="2">${data.requests || ''}</textarea>
-                    </div>
-                    <div class="form-group grid-full-width">
-                        <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
-                        <textarea class="form-control" id="${prefix}-notes" rows="2">${data.notes || ''}</textarea>
+                    <div class="form-grid form-grid--2-col">
+                        <div class="form-group">
+                            <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
+                            <textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
+                            <textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea>
+                        </div>
                     </div>
                 </div>
                 
@@ -353,11 +355,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             </form>
         `;
     }
-
-    // =======================================================================
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 생략되었던 함수들 복원 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-    // =======================================================================
-
+    
     // --- 3. 핵심 로직 함수 ---
 
     async function fetchAllInitialData() {
@@ -506,13 +504,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     prevPageButton.addEventListener('click', () => populateReservations(currentPage - 1, currentFilters));
     nextPageButton.addEventListener('click', () => populateReservations(currentPage + 1, currentFilters));
     
-    // =======================================================================
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 생략되었던 함수들 복원 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-    // =======================================================================
-    
-    /**
-     * 폼에서 카테고리별 상세 정보를 객체 형태로 추출합니다.
-     */
     function getDetailsFromForm(prefix, category) {
         const details = {};
         const form = document.getElementById(`${prefix}-form`);
@@ -552,9 +543,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         return details;
     }
 
-    /**
-     * 카테고리 변경 시 호출되어 상세 정보 UI를 업데이트하고 라벨을 변경합니다.
-     */
     function handleCategoryChange(prefix) {
         const categorySelect = document.getElementById(`${prefix}-category`);
         const detailsContainer = document.getElementById(`${prefix}-details-container`);
@@ -578,9 +566,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (endDateLabel) endDateLabel.textContent = currentLabels.endDate;
     }
     
-    /**
-     * 동적으로 생성된 폼 내부에 이벤트 리스너를 설정합니다.
-     */
     function setupFormEventListeners(prefix) {
         const categorySelect = document.getElementById(`${prefix}-category`);
         if (categorySelect) {
@@ -633,9 +618,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * 수정 모달을 열고 데이터를 채웁니다.
-     */
     async function openReservationModal(reservationId) {
         try {
             const reservationData = await window.apiFetch(`reservations/${reservationId}`);
@@ -727,11 +709,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
         });
     }
-
-    // =======================================================================
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 생략되었던 함수들 복원 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-    // =======================================================================
-
 
     // --- 5. 페이지 초기화 실행 ---
     async function initializePage() {
