@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     /**
-     * [수정] 카테고리별 상세 정보 필드 HTML을 3열 그리드에 맞게 반환합니다.
+     * [수정] 카테고리별 상세 정보 필드 HTML을 4열 그리드에 맞게 반환합니다.
      */
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
@@ -145,11 +145,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group grid-span-2">
                         <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
                         <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group grid-span-2">
                         <label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label>
                         <input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}">
                     </div>
@@ -183,6 +183,10 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="form-group">
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                    </div>
+                    <div class="form-group grid-span-2">
+                        <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
+                        <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
                     ${commonFields}
                 `;
@@ -226,12 +230,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                     ${commonFields}
                 `;
             default:
-                return '<p class="text-muted grid-span-3">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
+                return '<p class="text-muted grid-span-4">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
         }
     }
 
     /**
-     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 재구성합니다.
+     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 4열 그리드 기준으로 재구성합니다.
      */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
@@ -259,8 +263,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
-                    <div class="form-grid form-grid--3-col">
-                        <div class="form-group">
+                    <div class="form-grid form-grid--4-col">
+                        <div class="form-group grid-span-2">
                             <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
                             <div class="searchable-dropdown">
                                 <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
@@ -301,7 +305,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
-                    <div class="form-grid form-grid--3-col" id="${prefix}-details-container">
+                    <div class="form-grid form-grid--4-col" id="${prefix}-details-container">
                         ${getCategoryFields(prefix, category, details)}
                     </div>
                 </div>
@@ -309,7 +313,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
-                    <div class="form-grid form-grid--3-col">
+                    <div class="form-grid form-grid--4-col">
                         <div class="form-group">
                             <label for="${prefix}-total_price" class="form-label">판매가</label>
                             <input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}">
