@@ -8,11 +8,10 @@ document.addEventListener("DOMContentLoaded", async function() {
         user = await window.apiFetch('user-info');
     } catch (error) {
         console.error("사용자 정보 로딩 실패:", error);
-        // 사용자 정보 로딩 실패 시 페이지 기능이 제한될 수 있음을 알림
         toast.error("사용자 정보를 불러오지 못했습니다. 일부 기능이 제한될 수 있습니다.");
-        return; // 필수 데이터 로딩 실패 시 실행 중단
+        return;
     }
-
+    
     const transactionListTable = document.getElementById('transaction-list-table');
     
     // 현황판 요소
@@ -65,16 +64,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 2. 데이터 로딩 및 화면 구성 함수 ---
 
     async function updateSummaryCards(year = null, month = null) {
+        let endpoint = 'transactions/summary';
+        const params = new URLSearchParams();
+        if (year) params.append('year', year);
+        if (month) params.append('month', month);
+        const queryString = params.toString();
+        if (queryString) endpoint += `?${queryString}`;
+        
         try {
-            let endpoint = 'transactions/summary';
-            const params = new URLSearchParams();
-            if (year) params.append('year', year);
-            if (month) params.append('month', month);
-            const queryString = params.toString();
-            if (queryString) endpoint += `?${queryString}`;
-            
             const summary = await window.apiFetch(endpoint);
-            
             totalIncomeEl.textContent = `${Number(summary.total_income).toLocaleString()} VND`;
             totalExpenseEl.textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
             balanceEl.textContent = `${Number(summary.balance).toLocaleString()} VND`;
@@ -103,9 +101,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * [수정됨] Promise.allSettled를 사용하여 일부 API 호출이 실패해도 나머지는 정상적으로 로드되도록 변경
-     */
     async function populateSelectOptions() {
         const results = await Promise.allSettled([
             window.apiFetch('reservations?page_size=10000'),
@@ -117,28 +112,31 @@ document.addEventListener("DOMContentLoaded", async function() {
         const partners = results[1].status === 'fulfilled' ? results[1].value : [];
         const users = results[2].status === 'fulfilled' ? results[2].value : [];
 
-        // 예약 드롭다운 채우기
         const resOptions = ['<option value="">-- 예약 선택 --</option>'];
-        reservationsResponse.results.forEach(res => {
-            const customerName = res.customer ? res.customer.name : '알 수 없음';
-            resOptions.push(`<option value="${res.id}">[${res.id}] ${res.tour_name} - ${customerName}</option>`);
-        });
+        if (reservationsResponse.results) {
+            reservationsResponse.results.forEach(res => {
+                const customerName = res.customer ? res.customer.name : '알 수 없음';
+                resOptions.push(`<option value="${res.id}">[${res.id}] ${res.tour_name} - ${customerName}</option>`);
+            });
+        }
         reservationSelect.innerHTML = resOptions.join('');
         editReservationSelect.innerHTML = resOptions.join('');
 
-        // 제휴업체 드롭다운 채우기
         const partnerOptions = ['<option value="">-- 제휴업체 선택 --</option>'];
-        partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
+        if (partners) {
+            partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
+        }
         partnerSelect.innerHTML = partnerOptions.join('');
         editPartnerSelect.innerHTML = partnerOptions.join('');
-        
-        // 담당자 드롭다운 채우기
+
         managerSelect.innerHTML = '';
         if (user && user.is_superuser) {
-            users.forEach(u => {
-                const option = `<option value="${u.id}">${u.username}</option>`;
-                managerSelect.innerHTML += option;
-            });
+            if (users) {
+                users.forEach(u => {
+                    const option = `<option value="${u.id}">${u.username}</option>`;
+                    managerSelect.innerHTML += option;
+                });
+            }
         } else if (user) {
             managerSelect.innerHTML = `<option value="${user.id}">${user.username}</option>`;
             managerSelect.disabled = true;
@@ -146,10 +144,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     async function populateTransactions(page = 1, filters = {}) {
+        currentFilters = filters;
+        let params = new URLSearchParams({ page, ...filters });
+        const queryString = params.toString();
         try {
-            currentFilters = filters;
-            let params = new URLSearchParams({ page, ...filters });
-            const queryString = params.toString();
             const response = await window.apiFetch(`transactions?${queryString}`);
             
             transactionListTable.innerHTML = '';
@@ -162,11 +160,22 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
             const transactions = response.results;
             const totalCount = response.count;
-            totalPages = Math.ceil(totalCount / 50); // 페이지당 50개로 가정
+            totalPages = Math.ceil(totalCount / 50);
             transactions.forEach(trans => {
                 const row = document.createElement('tr');
                 const amountClass = trans.transaction_type === 'INCOME' ? 'text-primary' : 'text-danger';
                 const relatedItem = trans.reservation ? `예약: ${trans.reservation.tour_name}` : (trans.partner ? `업체: ${trans.partner.name}` : '');
+                
+                let adminButtons = '';
+                if (user && user.is_superuser) {
+                    adminButtons = `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary edit-btn" data-id="${trans.id}">수정</button>
+                            <button class="btn btn-danger delete-btn" data-id="${trans.id}" data-desc="${trans.description}">삭제</button>
+                        </div>
+                    `;
+                }
+
                 row.innerHTML = `
                     <td>${trans.transaction_date}</td>
                     <td><span class="badge bg-${amountClass.includes('primary') ? 'primary' : 'danger'}">${trans.transaction_type === 'INCOME' ? '수입' : '지출'}</span></td>
@@ -174,23 +183,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <td class="${amountClass} fw-bold">${Number(trans.amount).toLocaleString()} VND</td>
                     <td>${relatedItem}</td>
                     <td>${trans.manager ? trans.manager.username : ''}</td>
-                    <td></td>
+                    <td>${adminButtons}</td>
                 `;
-                if (user && user.is_superuser) {
-                    const buttonGroup = document.createElement('div');
-                    buttonGroup.className = 'btn-group';
-                    const editButton = document.createElement('button');
-                    editButton.textContent = '수정';
-                    editButton.className = 'btn btn-primary btn-sm';
-                    editButton.onclick = () => { /* 수정 모달 로직 */ };
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = '삭제';
-                    deleteButton.className = 'btn btn-danger btn-sm';
-                    deleteButton.onclick = async () => { /* 삭제 로직 */ };
-                    buttonGroup.appendChild(editButton);
-                    buttonGroup.appendChild(deleteButton);
-                    row.cells[6].appendChild(buttonGroup);
-                }
                 transactionListTable.appendChild(row);
             });
             currentPage = page;
@@ -204,42 +198,57 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
+    async function openEditTransactionModal(transactionId) {
+        try {
+            const trans = await window.apiFetch(`transactions/${transactionId}`);
+            
+            document.getElementById('edit-trans-date').value = trans.transaction_date;
+            document.getElementById('edit-trans-type').value = trans.transaction_type;
+            document.getElementById('edit-trans-amount').value = trans.amount;
+            document.getElementById('edit-trans-description').value = trans.description;
+            editReservationSelect.value = trans.reservation ? trans.reservation.id : '';
+            editPartnerSelect.value = trans.partner ? trans.partner.id : '';
+            document.getElementById('edit-trans-notes').value = trans.notes || '';
+
+            editModalSaveButton.onclick = async () => {
+                const updatedData = {
+                    transaction_date: document.getElementById('edit-trans-date').value,
+                    transaction_type: document.getElementById('edit-trans-type').value,
+                    amount: document.getElementById('edit-trans-amount').value,
+                    description: document.getElementById('edit-trans-description').value,
+                    reservation_id: editReservationSelect.value || null,
+                    partner_id: editPartnerSelect.value || null,
+                    notes: document.getElementById('edit-trans-notes').value,
+                };
+
+                try {
+                    await window.apiFetch(`transactions/${trans.id}`, { method: 'PUT', body: JSON.stringify(updatedData) });
+                    editModal.hide();
+                    toast.show("거래 내역이 수정되었습니다.");
+                    populateTransactions(currentPage, currentFilters);
+                    updateSummaryCards(summaryYearSelect.value, summaryMonthSelect.value);
+                } catch (error) {
+                    toast.error(`수정 실패: ${error.message}`);
+                }
+            };
+
+            editModal.show();
+        } catch (error) {
+            toast.error("거래 정보를 불러오는 데 실패했습니다.");
+        }
+    }
+
     function applyFilters() {
-    const filters = {
-        search: filterSearchInput.value.trim(),
-        date_after: filterStartDate.value,
-        date_before: filterEndDate.value
-    };
-    // 빈 필터 값은 제거
-    for (const key in filters) {
-        if (!filters[key]) delete filters[key];
+        const filters = {
+            search: filterSearchInput.value.trim(),
+            date_after: filterStartDate.value,
+            date_before: filterEndDate.value
+        };
+        for (const key in filters) {
+            if (!filters[key]) delete filters[key];
+        }
+        populateTransactions(1, filters);
     }
-
-    // 두 함수를 동시에 실행하여 테이블과 현황판을 함께 업데이트
-    populateTransactions(1, filters);
-    updateFilteredSummary(filters); 
-}
-	
-	async function updateFilteredSummary(filters = {}) {
-    const container = document.getElementById('filtered-summary-container');
-    // 필터가 없으면(전체 조회 시) 현황판을 숨깁니다.
-    if (Object.keys(filters).length === 0) {
-        container.style.display = 'none';
-        return;
-    }
-
-    const params = new URLSearchParams(filters);
-    try {
-        const summary = await window.apiFetch(`transactions/summary?${params.toString()}`);
-        document.getElementById('filtered-income').textContent = `${Number(summary.total_income).toLocaleString()} VND`;
-        document.getElementById('filtered-expense').textContent = `${Number(summary.total_expense).toLocaleString()} VND`;
-        document.getElementById('filtered-balance').textContent = `${Number(summary.balance).toLocaleString()} VND`;
-        container.style.display = 'flex'; // 숨겨뒀던 현황판을 보여줍니다.
-    } catch (error) {
-        console.error("필터링된 현황 요약 로딩 실패:", error);
-        container.style.display = 'none';
-    }
-}
 
     // --- 3. 이벤트 리스너 설정 ---
     
@@ -257,9 +266,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         newTransactionModal.show();
     });
 
-    /**
-     * [수정됨] try...catch를 추가하여 폼 제출 시 발생하는 서버 오류를 처리하고 사용자에게 피드백을 제공
-     */
     transactionForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         try {
@@ -275,20 +281,15 @@ document.addEventListener("DOMContentLoaded", async function() {
                 reservation_id: reservationSelect.value || null,
                 partner_id: partnerSelect.value || null,
             };
-            
             await window.apiFetch('transactions', { method: 'POST', body: JSON.stringify(formData) });
-            
             newTransactionModal.hide();
             transactionForm.reset();
             expenseItemWrapper.style.display = 'none';
             toast.show("새로운 거래 내역이 성공적으로 등록되었습니다.");
-            
             await populateTransactions(1, {});
             await updateSummaryCards();
-
         } catch (error) {
             toast.error(`등록 실패: ${error.message}`);
-            console.error("Transaction submission failed:", error);
         }
     });
     
@@ -302,14 +303,38 @@ document.addEventListener("DOMContentLoaded", async function() {
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters);
     });
+
     nextPageButton.addEventListener('click', () => {
         if (currentPage < totalPages) populateTransactions(currentPage + 1, currentFilters);
+    });
+    
+    transactionListTable.addEventListener('click', async (event) => {
+        const target = event.target;
+        
+        if (target.classList.contains('edit-btn')) {
+            const transactionId = target.dataset.id;
+            openEditTransactionModal(transactionId);
+        }
+        
+        if (target.classList.contains('delete-btn')) {
+            const transactionId = target.dataset.id;
+            const description = target.dataset.desc;
+            if (confirm(`'${description}' 거래 내역을 정말 삭제하시겠습니까?`)) {
+                try {
+                    await window.apiFetch(`transactions/${transactionId}`, { method: 'DELETE' });
+                    toast.show("거래 내역이 삭제되었습니다.");
+                    populateTransactions(currentPage, currentFilters);
+                    updateSummaryCards(summaryYearSelect.value, summaryMonthSelect.value);
+                } catch (error) {
+                    toast.error(`삭제 실패: ${error.message}`);
+                }
+            }
+        }
     });
     
     // --- 4. 페이지 초기화 실행 ---
     async function initializePage() {
         populateYearMonthDropdowns();
-        // 초기 데이터 로딩 함수들을 병렬로 실행
         await Promise.all([
             populateSelectOptions(),
             updateSummaryCards(),
