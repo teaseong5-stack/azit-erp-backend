@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     const summaryTotalCost = document.getElementById('summary-total-cost');
     const summaryTotalMargin = document.getElementById('summary-total-margin');
     const summaryManagerCounts = document.getElementById('summary-manager-counts');
-    
+
     // 상세 정보 팝업(모달) 요소
     const detailModalEl = new bootstrap.Modal(document.getElementById('reportDetailModal'));
     const detailModalTitle = document.getElementById('report-detail-title');
@@ -99,8 +99,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                 window.apiFetch(paginatedEndpoint),
                 window.apiFetch(allEndpoint)
             ]);
-            
-            allReservations = allResponse.results || []; 
+
+            allReservations = allResponse.results || [];
             tableBody.innerHTML = '';
 
             if (!paginatedResponse || !paginatedResponse.results || paginatedResponse.results.length === 0) {
@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 const row = tableBody.insertRow();
                 const margin = (res.total_price || 0) - (res.total_cost || 0);
                 row.innerHTML = `
-                    <td><a href="#" class="category-detail-link" data-category="${res.category}">${res.category_display || 'N/A'}</a></td>
+                    <td><a href="#" class="category-detail-link" data-category="${res.category}" data-category-name="${res.category_display}">${res.category_display || 'N/A'}</a></td>
                     <td>${res.tour_name}</td>
                     <td>${res.customer ? res.customer.name : 'N/A'}</td>
                     <td>${Number(res.total_price).toLocaleString()} VND</td>
@@ -128,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <td><a href="#" class="manager-detail-link" data-manager-name="${res.manager ? res.manager.username : '미지정'}">${res.manager ? res.manager.username : '미지정'}</a></td>
                 `;
             });
-            
+
             currentPage = page;
             pageInfo.textContent = `페이지 ${currentPage} / ${totalPages} (총 ${totalCount}건)`;
             prevPageButton.disabled = !paginatedResponse.previous;
@@ -139,8 +139,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
         }
     }
-    
-    function showDetailPopup(type, value) {
+
+    function showDetailPopup(type, value, displayName) {
         let title = '';
         let headers = [];
         let rows = [];
@@ -150,7 +150,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             title = `${value} 담당 상세 실적`;
             headers = ['카테고리', '매출액 (VND)', '건수'];
             const filtered = allReservations.filter(r => (r.manager ? r.manager.username : '미지정') === value);
-            
+
             filtered.forEach(r => {
                 const key = r.category_display || '기타';
                 const current = dataMap.get(key) || { sales: 0, count: 0 };
@@ -158,15 +158,14 @@ document.addEventListener("DOMContentLoaded", async function() {
                 current.count += 1;
                 dataMap.set(key, current);
             });
-            
+
             rows = Array.from(dataMap, ([key, val]) => `<tr><td>${key}</td><td>${val.sales.toLocaleString()}</td><td>${val.count}</td></tr>`);
 
         } else { // category
-            const categoryName = allReservations.find(r => r.category === value)?.category_display || value;
-            title = `${categoryName} 카테고리 상세 실적`;
+            title = `${displayName} 카테고리 상세 실적`;
             headers = ['담당자', '매출액 (VND)', '건수'];
             const filtered = allReservations.filter(r => r.category === value);
-            
+
             filtered.forEach(r => {
                 const key = r.manager ? r.manager.username : '미지정';
                 const current = dataMap.get(key) || { sales: 0, count: 0 };
@@ -177,7 +176,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
             rows = Array.from(dataMap, ([key, val]) => `<tr><td>${key}</td><td>${val.sales.toLocaleString()}</td><td>${val.count}</td></tr>`);
         }
-        
+
         detailModalTitle.textContent = title;
         detailModalBody.innerHTML = `
             <div class="table-responsive">
@@ -209,7 +208,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         fetchReportData(1, filters);
         fetchSummaryData(filters);
     }
-    
+
     function resetFilters() {
         yearSelect.value = '';
         monthSelect.value = '';
@@ -222,7 +221,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 4. 이벤트 리스너 설정 ---
     filterButton.addEventListener('click', applyFilters);
     resetButton.addEventListener('click', resetFilters);
-    
+
     prevPageButton.addEventListener('click', () => {
         if (currentPage > 1) fetchReportData(currentPage - 1, currentFilters);
     });
@@ -232,15 +231,17 @@ document.addEventListener("DOMContentLoaded", async function() {
     });
 
     document.querySelector('.content').addEventListener('click', function(event) {
-        if (event.target.classList.contains('manager-detail-link')) {
+        const target = event.target;
+        if (target.classList.contains('manager-detail-link')) {
             event.preventDefault();
-            const managerName = event.target.dataset.managerName;
-            showDetailPopup('manager', managerName);
+            const managerName = target.dataset.managerName;
+            showDetailPopup('manager', managerName, managerName);
         }
-        if (event.target.classList.contains('category-detail-link')) {
+        if (target.classList.contains('category-detail-link')) {
             event.preventDefault();
-            const category = event.target.dataset.category;
-            showDetailPopup('category', category);
+            const category = target.dataset.category;
+            const categoryName = target.dataset.categoryName;
+            showDetailPopup('category', category, categoryName);
         }
     });
 
