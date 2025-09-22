@@ -208,3 +208,5 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenObtainPairSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenRefreshSerializer",
 }
+# 개발용 (이메일을 실제 발송하지 않고 콘솔에 출력)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
