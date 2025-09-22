@@ -39,14 +39,9 @@ document.addEventListener("DOMContentLoaded", async function() {
     const filterButton = document.getElementById('filter-button');
 
     const exportCsvButton = document.getElementById('export-csv-button');
-
-    // 페이지네이션 요소
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
-
-    const selectAllCheckbox = document.getElementById('select-all-checkbox');
-    const bulkDeleteButton = document.getElementById('bulk-delete-button');
 
     // 상태 관리 변수
     let currentPage = 1;
@@ -119,10 +114,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             toast.error("요약 정보를 불러오는데 실패했습니다.");
         }
     }
-
-    /**
-     * [수정] 카테고리별 상세 정보 필드 HTML을 4열 그리드에 맞게 반환합니다.
-     */
+    
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
             <div class="form-group">
@@ -145,11 +137,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
                     </div>
-                    <div class="form-group grid-span-2">
+                    <div class="form-group">
                         <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
                         <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
-                    <div class="form-group grid-span-2">
+                    <div class="form-group">
                         <label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label>
                         <input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}">
                     </div>
@@ -183,10 +175,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     <div class="form-group">
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
-                    </div>
-                    <div class="form-group grid-span-2">
-                        <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
-                        <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
                     </div>
                     ${commonFields}
                 `;
@@ -234,9 +222,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 4열 그리드 기준으로 재구성합니다.
-     */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
@@ -260,11 +245,10 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         return `
             <form id="${prefix}-form" class="reservation-form-layout">
-                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-grid form-grid--4-col">
-                        <div class="form-group grid-span-2">
+                        <div class="form-group">
                             <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
                             <div class="searchable-dropdown">
                                 <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
@@ -302,7 +286,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
-                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
                     <div class="form-grid form-grid--4-col" id="${prefix}-details-container">
@@ -310,7 +293,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
-                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-grid form-grid--4-col">
@@ -340,17 +322,16 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
                 
-                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
-                    <div class="form-grid form-grid--2-col">
+                    <div class="form-grid form-grid--1-col">
                         <div class="form-group">
                             <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
-                            <textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea>
+                            <textarea class="form-control" id="${prefix}-requests" rows="2">${data.requests || ''}</textarea>
                         </div>
                         <div class="form-group">
                             <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
-                            <textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea>
+                            <textarea class="form-control" id="${prefix}-notes" rows="2">${data.notes || ''}</textarea>
                         </div>
                     </div>
                 </div>
@@ -359,7 +340,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             </form>
         `;
     }
-    
+
     // --- 3. 핵심 로직 함수 ---
 
     async function fetchAllInitialData() {
@@ -633,8 +614,15 @@ document.addEventListener("DOMContentLoaded", async function() {
             modalSaveButton.onclick = async () => {
                 const form = document.getElementById('edit-reservation-form');
                 const category = form.querySelector('#edit-reservation-category').value;
+                const customerId = form.querySelector('#edit-reservation-customer_id').value;
+
+                if (!customerId || isNaN(parseInt(customerId))) {
+                    toast.error("유효한 고객을 선택해주세요.");
+                    return;
+                }
+
                 const updatedData = {
-                    customer_id: form.querySelector('#edit-reservation-customer_id').value,
+                    customer_id: customerId,
                     tour_name: form.querySelector('#edit-reservation-tour_name').value,
                     reservation_date: form.querySelector('#edit-reservation-reservation_date').value,
                     start_date: form.querySelector('#edit-reservation-start_date').value || null,
@@ -720,6 +708,14 @@ document.addEventListener("DOMContentLoaded", async function() {
         await fetchAllInitialData();
         await updateCategorySummary(getSummaryFiltersFromInputs());
         await populateReservations(1, {});
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        const reservationId = urlParams.get('id');
+
+        if (action === 'edit' && reservationId) {
+            openReservationModal(reservationId);
+        }
     }
     
     initializePage();

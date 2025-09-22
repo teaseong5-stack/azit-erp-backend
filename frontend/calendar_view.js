@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     const detailModal = new bootstrap.Modal(document.getElementById('reservationDetailModal'));
     const modalBodyContent = document.getElementById('modal-body-content');
     const modalTitle = document.querySelector('#reservationDetailModal .modal-title');
+    // [추가] 모달의 수정 버튼 요소
+    const modalEditButton = document.getElementById('modal-detail-edit-button');
     
     let calendar = null;
     let allReservations = []; // 전체 예약 데이터 저장
@@ -23,7 +25,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         'OTHER': { label: '기타', color: '#808080' }
     };
     
-    // [추가] 예약 및 결제 상태에 대한 정보 객체
     const statusInfo = { 
         'PENDING': { label: '상담중', color: 'secondary' }, 
         'CONFIRMED': { label: '예약확정', color: 'primary' }, 
@@ -159,9 +160,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 if (info.el._tippy) info.el._tippy.hide();
             },
             
-            /**
-             * [수정] payment_status와 special_notes를 포함하여 모달 내용을 최종 강화합니다.
-             */
             eventClick: function(info) {
                 const res = info.event.extendedProps.reservation;
                 if (res) {
@@ -206,6 +204,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <h6>내부 메모</h6>
                         <p class="bg-light p-2 rounded small">${res.notes || '없음'}</p>
                     `;
+
+                    // [추가] 수정 버튼에 클릭 이벤트 할당
+                    modalEditButton.onclick = () => {
+                        window.location.href = `reservations.html?action=edit&id=${res.id}`;
+                    };
+
                     detailModal.show();
                 }
             }
