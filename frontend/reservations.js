@@ -245,10 +245,11 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         return `
             <form id="${prefix}-form" class="reservation-form-layout">
+                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-grid form-grid--4-col">
-                        <div class="form-group">
+                        <div class="form-group grid-span-2">
                             <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
                             <div class="searchable-dropdown">
                                 <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
@@ -267,7 +268,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                                 <option value="OTHER" ${category === 'OTHER' ? 'selected' : ''}>기타</option>
                             </select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group grid-span-2">
                             <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
                             <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
                         </div>
@@ -286,6 +287,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
+                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
                     <div class="form-grid form-grid--4-col" id="${prefix}-details-container">
@@ -293,6 +295,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
+                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-grid form-grid--4-col">
@@ -322,6 +325,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
                 
+                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
                     <div class="form-grid form-grid--1-col">

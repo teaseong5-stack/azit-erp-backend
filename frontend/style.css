@@ -165,3 +165,75 @@ body {
     word-wrap: break-word; /* 내용이 길 경우 자동 줄바꿈 */
     white-space: normal;
 }
+
+
+/* --- Reservation Page Specific Styles --- */
+/* (This section is now empty as styles were moved to the new popup layout section) */
+
+
+/* --- Reservation Form Popup Layout (4-Column Grid) --- */
+
+.reservation-form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.reservation-form-layout .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.reservation-form-layout .form-section-title {
+    margin-bottom: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 1.1rem;
+    color: #0d6efd;
+}
+
+.reservation-form-layout .form-grid {
+    display: grid;
+    gap: 1rem 1.5rem;
+}
+
+.reservation-form-layout .form-grid--1-col {
+    grid-template-columns: 1fr;
+}
+
+.reservation-form-layout .form-grid--4-col {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.reservation-form-layout .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 그리드 아이템이 특정 칸을 차지하도록 하는 클래스 */
+.reservation-form-layout .grid-span-2 {
+    grid-column: span 2;
+}
+.reservation-form-layout .grid-span-4 {
+    grid-column: span 4;
+}
+
+/* 반응형: 화면이 1200px보다 작아지면 2열로, 768px보다 작아지면 1열로 변경 */
+@media (max-width: 1199.98px) {
+    .reservation-form-layout .form-grid--4-col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .reservation-form-layout .grid-span-2 {
+        grid-column: span 1; /* 2열일 때 2칸짜리는 1칸으로 */
+    }
+}
+@media (max-width: 767.98px) {
+    .reservation-form-layout .form-grid--4-col {
+        grid-template-columns: 1fr;
+    }
+    .reservation-form-layout .grid-span-2,
+    .reservation-form-layout .grid-span-4 {
+        grid-column: span 1; /* 모바일에서는 모든 항목이 1칸씩 차지 */
+    }
+}
