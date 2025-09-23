@@ -89,9 +89,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         return filters;
     }
 
-    /**
-     * [수정] 총 마진 현황판을 추가하고, API로부터 cost 데이터를 받아 계산합니다.
-     */
     async function updateCategorySummary(filters = {}) {
         currentSummaryFilters = filters;
         const params = new URLSearchParams({ group_by: 'category', ...filters });
@@ -99,59 +96,42 @@ document.addEventListener("DOMContentLoaded", async function() {
             const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
             const categorySummaryCards = document.getElementById('category-summary-cards');
             categorySummaryCards.innerHTML = '';
+
+            let totalSales = 0;
+            let totalCost = 0;
+
             if (!summaryData || summaryData.length === 0) {
                 categorySummaryCards.innerHTML = '<div class="col"><p class="text-muted text-center">요약 정보가 없습니다.</p></div>';
                 return;
             }
             const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
             
-            const dataMap = new Map(summaryData.map(item => [item.category, { sales: item.sales, cost: item.cost }]));
-            let totalSales = 0;
-            let totalCost = 0;
+            const salesMap = new Map();
+            summaryData.forEach(item => {
+                salesMap.set(item.category, { sales: item.sales, cost: item.cost });
+                totalSales += Number(item.sales);
+                totalCost += Number(item.cost);
+            });
 
             Object.entries(categoryLabels).forEach(([key, label]) => {
-                const data = dataMap.get(key) || { sales: 0, cost: 0 };
-                const sales = Number(data.sales) || 0;
-                totalSales += sales;
-                totalCost += (Number(data.cost) || 0);
-
-                categorySummaryCards.innerHTML += `
-                    <div class="col">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">${label}</h5>
-                                <p class="card-text">${sales.toLocaleString()} VND</p>
-                            </div>
-                        </div>
-                    </div>`;
+                const data = salesMap.get(key) || { sales: 0 };
+                categorySummaryCards.innerHTML += `<div class="col"><div class="card"><div class="card-body"><h5 class="card-title">${label}</h5><p class="card-text">${Number(data.sales).toLocaleString()} VND</p></div></div></div>`;
             });
 
             const totalMargin = totalSales - totalCost;
 
-            categorySummaryCards.innerHTML += `
-                <div class="col">
-                    <div class="card bg-dark text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">총 합계</h5>
-                            <p class="card-text">${totalSales.toLocaleString()} VND</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">총 마진</h5>
-                            <p class="card-text ${totalMargin >= 0 ? '' : 'text-warning'}">${totalMargin.toLocaleString()} VND</p>
-                        </div>
-                    </div>
-                </div>
-            `;
+            categorySummaryCards.innerHTML += `<div class="col"><div class="card bg-dark text-white"><div class="card-body"><h5 class="card-title">총 합계</h5><p class="card-text">${totalSales.toLocaleString()} VND</p></div></div></div>`;
+            categorySummaryCards.innerHTML += `<div class="col"><div class="card ${totalMargin >= 0 ? 'bg-primary' : 'bg-danger'} text-white"><div class="card-body"><h5 class="card-title">총 마진</h5><p class="card-text">${totalMargin.toLocaleString()} VND</p></div></div></div>`;
+
         } catch (error) {
             console.error("카테고리 요약 업데이트 실패:", error);
             toast.error("요약 정보를 불러오는데 실패했습니다.");
         }
     }
     
+    /**
+     * [수정] 카테고리별 상세 정보 필드 HTML을 요청된 레이아웃에 맞게 반환합니다.
+     */
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
             <div class="form-group">
@@ -170,49 +150,55 @@ document.addEventListener("DOMContentLoaded", async function() {
         switch (category) {
             case 'TOUR':
                 return `
-                    <div class="form-group">
-                        <label for="${prefix}-startTime" class="form-label">시작 시간</label>
-                        <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                    <div class="form-grid form-grid--2-col">
+                        <div class="form-group">
+                            <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
+                            <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
+                        </div>
+                         <div class="form-group">
+                            <label for="${prefix}-startTime" class="form-label">시작 시간</label>
+                            <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                        </div>
                     </div>
-                    <div class="form-group grid-span-2">
-                        <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
-                        <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
+                    <div class="form-grid form-grid--3-col mt-3">
+                        ${commonFields}
                     </div>
-                    ${commonFields}
                 `;
             case 'RENTAL_CAR':
                 return `
-                    <div class="form-group">
-                        <label for="${prefix}-carType" class="form-label">차량 종류</label>
-                        <select id="${prefix}-carType" class="form-select">
-                            <option value="4인승" ${details.carType === '4인승' ? 'selected' : ''}>4인승</option>
-                            <option value="7인승" ${details.carType === '7인승' ? 'selected' : ''}>7인승</option>
-                            <option value="9인승 리무진" ${details.carType === '9인승 리무진' ? 'selected' : ''}>9인승 리무진</option>
-                            <option value="16인승" ${details.carType === '16인승' ? 'selected' : ''}>16인승</option>
-                            <option value="29인승" ${details.carType === '29인승' ? 'selected' : ''}>29인승</option>
-                            <option value="45인승" ${details.carType === '45인승' ? 'selected' : ''}>45인승</option>
-                            <option value="렌터카+가이드" ${details.carType === '렌터카+가이드' ? 'selected' : ''}>렌터카+가이드</option>
-                        </select>
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
+                            <label for="${prefix}-carType" class="form-label">차량 종류</label>
+                            <select id="${prefix}-carType" class="form-select">
+                                <option value="4인승" ${details.carType === '4인승' ? 'selected' : ''}>4인승</option>
+                                <option value="7인승" ${details.carType === '7인승' ? 'selected' : ''}>7인승</option>
+                                <option value="9인승 리무진" ${details.carType === '9인승 리무진' ? 'selected' : ''}>9인승 리무진</option>
+                                <option value="16인승" ${details.carType === '16인승' ? 'selected' : ''}>16인승</option>
+                                <option value="29인승" ${details.carType === '29인승' ? 'selected' : ''}>29인승</option>
+                                <option value="45인승" ${details.carType === '45인승' ? 'selected' : ''}>45인승</option>
+                                <option value="렌터카+가이드" ${details.carType === '렌터카+가이드' ? 'selected' : ''}>렌터카+가이드</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-usageHours" class="form-label">이용 시간</label>
+                            <select id="${prefix}-usageHours" class="form-select">
+                                <option value="6시간" ${details.usageHours === '6시간' ? 'selected' : ''}>6시간</option>
+                                <option value="12시간" ${details.usageHours === '12시간' ? 'selected' : ''}>12시간</option>
+                                <option value="픽업" ${details.usageHours === '픽업' ? 'selected' : ''}>픽업</option>
+                                <option value="샌딩" ${details.usageHours === '샌딩' ? 'selected' : ''}>샌딩</option>
+                                <option value="공항픽업" ${details.usageHours === '공항픽업' ? 'selected' : ''}>공항픽업</option>
+                                <option value="공항샌딩" ${details.usageHours === '공항샌딩' ? 'selected' : ''}>공항샌딩</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-startTime" class="form-label">시작 시간</label>
+                            <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                        </div>
+                        ${commonFields}
                     </div>
-                    <div class="form-group">
-                        <label for="${prefix}-usageHours" class="form-label">이용 시간</label>
-                        <select id="${prefix}-usageHours" class="form-select">
-                            <option value="6시간" ${details.usageHours === '6시간' ? 'selected' : ''}>6시간</option>
-                            <option value="12시간" ${details.usageHours === '12시간' ? 'selected' : ''}>12시간</option>
-                            <option value="픽업" ${details.usageHours === '픽업' ? 'selected' : ''}>픽업</option>
-                            <option value="샌딩" ${details.usageHours === '샌딩' ? 'selected' : ''}>샌딩</option>
-                            <option value="공항픽업" ${details.usageHours === '공항픽업' ? 'selected' : ''}>공항픽업</option>
-                            <option value="공항샌딩" ${details.usageHours === '공항샌딩' ? 'selected' : ''}>공항샌딩</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-startTime" class="form-label">시작 시간</label>
-                        <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
-                    </div>
-                    ${commonFields}
                 `;
             case 'ACCOMMODATION':
-                return `
+                return `<div class="form-grid form-grid--4-col">
                     <div class="form-group">
                         <label for="${prefix}-roomType" class="form-label">방 종류</label>
                         <input type="text" class="form-control" id="${prefix}-roomType" value="${details.roomType || ''}">
@@ -229,9 +215,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-guests" class="form-label">인원수</label>
                         <input type="number" class="form-control" id="${prefix}-guests" value="${details.guests || 0}">
                     </div>
-                `;
+                </div>`;
             case 'GOLF':
-                return `
+                return `<div class="form-grid form-grid--2-col">
                     <div class="form-group">
                         <label for="${prefix}-teeOffTime" class="form-label">티오프</label>
                         <input type="time" class="form-control" id="${prefix}-teeOffTime" value="${details.teeOffTime || ''}">
@@ -240,25 +226,24 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-players" class="form-label">인원수</label>
                         <input type="number" class="form-control" id="${prefix}-players" value="${details.players || 0}">
                     </div>
-                    <div class="form-group"></div> <!-- Placeholder for 4-column grid -->
-                    ${commonFields}
-                `;
+                </div>`;
             case 'TICKET':
             case 'OTHER':
-                return `
+                return `<div class="form-grid form-grid--4-col">
                     <div class="form-group">
                         <label for="${prefix}-usageTime" class="form-label">이용 시간</label>
                         <input type="time" class="form-control" id="${prefix}-usageTime" value="${details.usageTime || ''}">
                     </div>
-                    <div class="form-group"></div> <!-- Placeholder -->
-                    <div class="form-group"></div> <!-- Placeholder -->
                     ${commonFields}
-                `;
+                </div>`;
             default:
-                return '<p class="text-muted grid-span-4">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
+                return '<p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
         }
     }
 
+    /**
+     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 4열 그리드 기반으로 재구성합니다.
+     */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
@@ -271,21 +256,16 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         let managerOptions = allUsers.map(u => `<option value="${u.id}" ${data.manager && data.manager.id === u.id ? 'selected' : ''}>${u.username}</option>`).join('');
         let managerFieldHtml = user.is_superuser ? `
-            <div class="form-group">
-                <label for="${prefix}-manager" class="form-label fw-bold">담당자</label>
-                <select class="form-select" id="${prefix}-manager">${managerOptions}</select>
-            </div>` : `
-            <div class="form-group">
-                <label class="form-label fw-bold">담당자</label>
-                <input type="text" class="form-control" value="${data.manager ? data.manager.username : user.username}" disabled>
-            </div>`;
+            <select class="form-select" id="${prefix}-manager">${managerOptions}</select>` : 
+            `<input type="text" class="form-control" value="${data.manager ? data.manager.username : user.username}" disabled>`;
 
         return `
             <form id="${prefix}-form" class="reservation-form-layout">
+                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
-                    <div class="form-grid form-grid--4-col">
-                        <div class="form-group grid-span-2">
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
                             <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
                             <div class="searchable-dropdown">
                                 <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
@@ -304,10 +284,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                                 <option value="OTHER" ${category === 'OTHER' ? 'selected' : ''}>기타</option>
                             </select>
                         </div>
-                        <div class="form-group grid-span-2">
+                        <div class="form-group">
                             <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
                             <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
                         </div>
+                    </div>
+                    <div class="form-grid form-grid--4-col mt-3">
                         <div class="form-group">
                             <label for="${prefix}-reservation_date" class="form-label">예약일</label>
                             <input type="date" class="form-control" id="${prefix}-reservation_date" value="${data.reservation_date || getLocalDateString()}">
@@ -320,16 +302,22 @@ document.addEventListener("DOMContentLoaded", async function() {
                             <label for="${prefix}-end_date" class="form-label">${currentLabels.endDate}</label>
                             <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
                         </div>
+                        <div class="form-group">
+                            <label for="${prefix}-manager" class="form-label fw-bold">담당자</label>
+                            ${managerFieldHtml}
+                        </div>
                     </div>
                 </div>
 
+                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
-                    <div class="form-grid form-grid--4-col" id="${prefix}-details-container">
+                    <div id="${prefix}-details-container">
                         ${getCategoryFields(prefix, category, details)}
                     </div>
                 </div>
 
+                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-grid form-grid--4-col">
@@ -355,20 +343,20 @@ document.addEventListener("DOMContentLoaded", async function() {
                                 <option value="CANCELED" ${data.status === 'CANCELED' ? 'selected' : ''}>취소</option>
                             </select>
                         </div>
-                        ${managerFieldHtml}
                     </div>
                 </div>
                 
+                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
-                    <div class="form-grid form-grid--1-col">
-                         <div class="form-group grid-span-2">
+                    <div class="form-grid form-grid--2-col">
+                        <div class="form-group">
                             <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
-                            <textarea class="form-control" id="${prefix}-requests" rows="2">${data.requests || ''}</textarea>
+                            <textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea>
                         </div>
-                        <div class="form-group grid-span-2">
+                        <div class="form-group">
                             <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
-                            <textarea class="form-control" id="${prefix}-notes" rows="2">${data.notes || ''}</textarea>
+                            <textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea>
                         </div>
                     </div>
                 </div>
@@ -378,6 +366,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         `;
     }
     
+    // --- 3. 핵심 로직 함수 (생략 없이 전체 포함) ---
     async function fetchAllInitialData() {
         try {
             const [customersRes, usersRes] = await Promise.all([
@@ -444,6 +433,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
+    // --- 4. 이벤트 처리 (생략 없이 전체 포함) ---
     function getFiltersFromInputs() {
         const filters = {
             category: filterCategory.value,
@@ -517,7 +507,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         const form = document.getElementById(`${prefix}-form`);
         if (!form) return details;
         const getFieldValue = (id) => form.querySelector(`#${prefix}-${id}`)?.value;
-        
         switch (category) {
             case 'TOUR':
             case 'RENTAL_CAR':
@@ -557,12 +546,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         const tourNameLabel = document.querySelector(`label[for='${prefix}-tour_name']`);
         const startDateLabel = document.querySelector(`label[for='${prefix}-start_date']`);
         const endDateLabel = document.querySelector(`label[for='${prefix}-end_date']`);
-        
         if (!categorySelect || !detailsContainer) return;
-        
         const category = categorySelect.value;
         detailsContainer.innerHTML = getCategoryFields(prefix, category, {});
-        
         const labels = {
             ACCOMMODATION: { tourName: '숙소명', startDate: '체크인', endDate: '체크아웃' },
             GOLF: { tourName: '골프장명', startDate: '라운딩일자', endDate: '종료일' },
@@ -579,9 +565,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (categorySelect) {
             categorySelect.addEventListener('change', () => handleCategoryChange(prefix));
         }
-
         initializeSearchableCustomerDropdown(prefix);
-
         if (prefix === 'new-reservation') {
             const form = document.getElementById(`${prefix}-form`);
             form.addEventListener('submit', async (e) => {
@@ -607,12 +591,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     notes: form.querySelector(`#${prefix}-notes`).value,
                     details: getDetailsFromForm(prefix, category),
                 };
-
                 const managerSelect = form.querySelector(`#${prefix}-manager`);
-                if (managerSelect) {
-                    formData.manager_id = managerSelect.value;
-                }
-                
+                if (managerSelect) formData.manager_id = managerSelect.value;
                 try {
                     await window.apiFetch('reservations', { method: 'POST', body: JSON.stringify(formData) });
                     newReservationModalEl.hide();
@@ -633,17 +613,14 @@ document.addEventListener("DOMContentLoaded", async function() {
             modalBody.innerHTML = renderFormFields('edit-reservation', reservationData);
             reservationModalEl.show();
             setupFormEventListeners('edit-reservation');
-
             modalSaveButton.onclick = async () => {
                 const form = document.getElementById('edit-reservation-form');
                 const category = form.querySelector('#edit-reservation-category').value;
                 const customerId = form.querySelector('#edit-reservation-customer_id').value;
-
                 if (!customerId || isNaN(parseInt(customerId))) {
                     toast.error("유효한 고객을 선택해주세요.");
                     return;
                 }
-                
                 const updatedData = {
                     customer_id: customerId,
                     tour_name: form.querySelector('#edit-reservation-tour_name').value,
@@ -659,12 +636,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                     notes: form.querySelector('#edit-reservation-notes').value,
                     details: getDetailsFromForm('edit-reservation', category),
                 };
-
                 const managerSelect = form.querySelector('#edit-reservation-manager');
-                if (managerSelect) {
-                    updatedData.manager_id = managerSelect.value;
-                }
-                
+                if (managerSelect) updatedData.manager_id = managerSelect.value;
                 try {
                     await window.apiFetch(`reservations/${reservationId}`, { method: 'PUT', body: JSON.stringify(updatedData) });
                     reservationModalEl.hide();
@@ -685,7 +658,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         const resultsContainer = document.getElementById(`${prefix}-customer-results`);
         const hiddenIdInput = document.getElementById(`${prefix}-customer_id`);
         if (!searchInput || !resultsContainer || !hiddenIdInput) return;
-
         searchInput.addEventListener('input', () => {
             const query = searchInput.value.toLowerCase();
             resultsContainer.innerHTML = '';
@@ -697,7 +669,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             const filteredCustomers = allCustomers.filter(c =>
                 c.name.toLowerCase().includes(query) || (c.phone_number && c.phone_number.includes(query))
             );
-
             if (filteredCustomers.length > 0) {
                 resultsContainer.style.display = 'block';
                 filteredCustomers.slice(0, 10).forEach(c => {
@@ -717,7 +688,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 resultsContainer.style.display = 'none';
             }
         });
-
         document.addEventListener('click', (e) => {
             if (e.target !== searchInput) {
                 resultsContainer.style.display = 'none';
