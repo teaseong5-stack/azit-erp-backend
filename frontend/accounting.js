@@ -56,12 +56,16 @@ document.addEventListener("DOMContentLoaded", async function() {
     const editPartnerSelect = document.getElementById('edit-trans-partner');
     const editManagerSelect = document.getElementById('edit-trans-manager');
 
+    // [수정] 누락되었던 페이지네이션 관련 요소 변수 선언
+    const prevPageButton = document.getElementById('prev-page-button');
+    const nextPageButton = document.getElementById('next-page-button');
+    const pageInfo = document.getElementById('page-info');
 
-    // 페이지네이션 관련 요소 및 상태 변수
+    // 상태 변수
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
-    let allUsers = []; // 모든 사용자 목록을 저장할 변수
+    let allUsers = []; 
 
     // --- 2. 데이터 로딩 및 화면 구성 함수 ---
 
@@ -112,7 +116,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         const partners = results[1].status === 'fulfilled' ? results[1].value : [];
         allUsers = results[2].status === 'fulfilled' ? results[2].value : [];
 
-        // 예약 드롭다운 채우기
         const resOptions = ['<option value="">-- 예약 선택 --</option>'];
         reservationsResponse.results.forEach(res => {
             const customerName = res.customer ? res.customer.name : '알 수 없음';
@@ -121,15 +124,13 @@ document.addEventListener("DOMContentLoaded", async function() {
         reservationSelect.innerHTML = resOptions.join('');
         editReservationSelect.innerHTML = resOptions.join('');
 
-        // 제휴업체 드롭다운 채우기
         const partnerOptions = ['<option value="">-- 제휴업체 선택 --</option>'];
         partners.forEach(p => partnerOptions.push(`<option value="${p.id}">${p.name}</option>`));
         partnerSelect.innerHTML = partnerOptions.join('');
         editPartnerSelect.innerHTML = partnerOptions.join('');
         
-        // 담당자 드롭다운 채우기
         managerSelect.innerHTML = '';
-        editManagerSelect.innerHTML = ''; // 수정 팝업 담당자도 초기화
+        editManagerSelect.innerHTML = '';
         if (user && user.is_superuser) {
             allUsers.forEach(u => {
                 const option = `<option value="${u.id}">${u.username}</option>`;
@@ -202,7 +203,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         try {
             const trans = await window.apiFetch(`transactions/${transactionId}`);
             
-            // 폼 필드 채우기
             document.getElementById('edit-trans-date').value = trans.transaction_date;
             document.getElementById('edit-trans-type').value = trans.transaction_type;
             document.getElementById('edit-trans-amount').value = trans.amount;
@@ -213,7 +213,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             editReservationSelect.value = trans.reservation ? trans.reservation.id : '';
             editPartnerSelect.value = trans.partner ? trans.partner.id : '';
             
-            // 지출 항목 필드 처리
             const expenseItemSelect = document.getElementById('edit-trans-expense-item');
             if (trans.transaction_type === 'EXPENSE') {
                 editExpenseItemWrapper.style.display = 'block';
@@ -223,7 +222,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 expenseItemSelect.value = '';
             }
 
-            // 저장 버튼에 클릭 이벤트 할당
             editModalSaveButton.onclick = async () => {
                 const updatedData = {
                     transaction_date: document.getElementById('edit-trans-date').value,
@@ -334,6 +332,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     filterButton.addEventListener('click', applyFilters);
     filterSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
+    
     prevPageButton.addEventListener('click', () => { if (currentPage > 1) populateTransactions(currentPage - 1, currentFilters); });
     nextPageButton.addEventListener('click', () => { if (currentPage < totalPages) populateTransactions(currentPage + 1, currentFilters); });
     
