@@ -208,5 +208,20 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenObtainPairSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.SlidingTokenRefreshSerializer",
 }
+# settings.py 파일에 추가할 내용
+
+# --- Email Configuration ---
+
 # 개발용 (이메일을 실제 발송하지 않고 콘솔에 출력)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# 실제 운영용 (Gmail 예시 - 실제 사용 시 아이디/비밀번호 입력 필요)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'freetour@azit-travel.com'  # 실제 Gmail 주소
+# EMAIL_HOST_PASSWORD = 'dnazit@2025*' # Gmail 앱 비밀번호
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+위 코드들을 모두 적용하고 서버를 재시작한 뒤, 예약 관리 페이지에서 예약의 상태를 '예약확정'으로 변경하고 저장하면, 고객의 이메일 주소가 등록되어 있을 경우 자동으로 이메일이 발송(또는 콘솔에 출력)될 것입니다.
