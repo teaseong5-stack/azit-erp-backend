@@ -8,8 +8,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-# [추가] TruncMonth를 가져옵니다.
 from django.db.models.functions import TruncMonth
+
 
 from .models import Customer, Reservation, Partner, Transaction
 from .serializers import (
@@ -17,24 +17,24 @@ from .serializers import (
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
 )
 
-# --- [추가] 리포트 페이지 전용 요약 API ---
+# --- [수정] 리포트 페이지 전용 요약 API ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
     """
     리포트 페이지의 요약 카드 데이터를 생성하는 API.
-    기존 reservation_summary와 달리, group_by 없이 총합계만 계산합니다.
+    전달된 모든 필터(년, 월 포함)를 적용하여 총합계를 계산합니다.
     """
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
-    # Reservation 목록 뷰와 동일한 필터링 로직 적용
+    # ▼▼▼▼▼ [수정] 이 부분이 수정/추가되었습니다 ▼▼▼▼▼
+    # reservation_list 뷰와 동일하게 모든 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
+    year = request.query_params.get('year', None)
+    month = request.query_params.get('month', None)
     
-    start_date_gte = request.query_params.get('start_date__gte')
-    start_date_lte = request.query_params.get('start_date__lte')
-
     if manager_id:
         queryset = queryset.filter(manager_id=manager_id)
     if category:
@@ -42,10 +42,12 @@ def report_summary(request):
     if search:
         queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
     
-    if start_date_gte:
-        queryset = queryset.filter(start_date__gte=start_date_gte)
-    if start_date_lte:
-        queryset = queryset.filter(start_date__lte=start_date_lte)
+    # [추가] 누락되었던 년/월 필터링 로직
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+    if month:
+        queryset = queryset.filter(start_date__month=month)
+    # ▲▲▲▲▲ [수정] 이 부분이 수정/추가되었습니다 ▲▲▲▲▲
 
     # 집계 연산
     totals = queryset.aggregate(
@@ -88,30 +90,31 @@ def user_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_reservations_csv(request):
+    queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
+    
+    # [수정] CSV 내보내기에도 필터링 로직을 적용합니다.
+    manager_id = request.query_params.get('manager', None)
+    category = request.query_params.get('category', None)
+    search = request.query_params.get('search', None)
+    year = request.query_params.get('year', None)
+    month = request.query_params.get('month', None)
+    
+    if manager_id:
+        queryset = queryset.filter(manager_id=manager_id)
+    if category:
+        queryset = queryset.filter(category=category)
+    if search:
+        queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+    if month:
+        queryset = queryset.filter(start_date__month=month)
+
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
     writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
     
-    queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
-
-    # 필터링 로직 추가
-    category = request.query_params.get('category', None)
-    search = request.query_params.get('search', None)
-    start_date_gte = request.query_params.get('start_date__gte', None)
-    start_date_lte = request.query_params.get('start_date__lte', None)
-
-    if category:
-        queryset = queryset.filter(category=category)
-    if search:
-        queryset = queryset.filter(
-            Q(tour_name__icontains=search) | Q(customer__name__icontains=search)
-        )
-    if start_date_gte:
-        queryset = queryset.filter(start_date__gte=start_date_gte)
-    if start_date_lte:
-        queryset = queryset.filter(start_date__lte=start_date_lte)
-
     for res in queryset:
         writer.writerow([
             res.id, res.get_category_display(), res.tour_name,
@@ -201,43 +204,61 @@ def reservation_bulk_delete(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_list_all(request):
+    # [수정] 필터링 기능을 `all` API에도 적용
     queryset = Reservation.objects.select_related('customer', 'manager').all()
+    
+    manager_id = request.query_params.get('manager', None)
+    category = request.query_params.get('category', None)
+    search = request.query_params.get('search', None)
+    year = request.query_params.get('year', None)
+    month = request.query_params.get('month', None)
+    
+    if manager_id:
+        queryset = queryset.filter(manager_id=manager_id)
+    if category:
+        queryset = queryset.filter(category=category)
+    if search:
+        queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+    if month:
+        queryset = queryset.filter(start_date__month=month)
+
     serializer = ReservationSerializer(queryset.order_by('-reservation_date'), many=True)
     return Response({'results': serializer.data})
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
     queryset = Reservation.objects.exclude(status='CANCELED')
-
-    # 필터 로직을 reservation_list와 유사하게 맞춤
+    
+    # 기간 필터
     year = request.query_params.get('year')
     month = request.query_params.get('month')
-    start_date_gte = request.query_params.get('start_date__gte')
-    start_date_lte = request.query_params.get('start_date__lte')
-    
-    if start_date_gte and start_date_lte:
-        queryset = queryset.filter(start_date__gte=start_date_gte, start_date__lte=start_date_lte)
-    elif year and month:
-        queryset = queryset.filter(start_date__year=year, start_date__month=month)
-    elif year:
+    start_date = request.query_params.get('start_date__gte')
+    end_date = request.query_params.get('start_date__lte')
+
+    if year:
         queryset = queryset.filter(start_date__year=year)
+    if month:
+        queryset = queryset.filter(start_date__month=month)
+    if start_date:
+        queryset = queryset.filter(start_date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(start_date__lte=end_date)
 
     group_by = request.query_params.get('group_by')
-    summary_data = {}
-
+    
     if group_by == 'category':
-        # ▼▼▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼▼▼
         summary = queryset.values('category').annotate(
-            total_sales=Sum('total_price'),
-            total_cost=Sum('total_cost') # 원가 합계 추가
-        ).order_by('-total_sales')
-        summary_data = [{'category': item['category'], 'sales': item['total_sales'], 'cost': item['total_cost']} for item in summary]
-        # ▲▲▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲▲▲
+            sales=Coalesce(Sum('total_price'), 0),
+            cost=Coalesce(Sum('total_cost'), 0)
+        ).order_by('category')
+        return Response(summary)
 
-    # ... (다른 group_by 로직은 동일하게 유지)
-
-    return Response(summary_data)
+    # ... (다른 group_by 로직은 생략)
+    return Response({})
 
 
 @api_view(['GET', 'POST'])
@@ -247,11 +268,20 @@ def reservation_list(request):
         base_queryset = Reservation.objects.select_related('customer', 'manager')
         queryset = base_queryset.all()
         
+        manager_id = request.query_params.get('manager', None)
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
         category = request.query_params.get('category', None)
         search = request.query_params.get('search', None)
         start_date_gte = request.query_params.get('start_date__gte', None)
         start_date_lte = request.query_params.get('start_date__lte', None)
 
+        if manager_id:
+            queryset = queryset.filter(manager_id=manager_id)
+        if year:
+            queryset = queryset.filter(start_date__year=year)
+        if month:
+            queryset = queryset.filter(start_date__month=month)
         if category:
             queryset = queryset.filter(category=category)
         if search:
@@ -259,30 +289,29 @@ def reservation_list(request):
                 Q(tour_name__icontains=search) | Q(customer__name__icontains=search)
             )
         if start_date_gte:
-            queryset = queryset.filter(start_date__gte=start_date_gte)
+            queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
         if start_date_lte:
-            queryset = queryset.filter(start_date__lte=start_date_lte)
+            queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
 
         paginator = PageNumberPagination()
         paginator.page_size = 50
-        
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-reservation_date'), request)
-        
         serializer = ReservationSerializer(paginated_queryset, many=True)
         return paginator.get_paginated_response(serializer.data)
 
     elif request.method == 'POST':
+        # ... (POST 로직은 동일)
         serializer = ReservationSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            serializer.save()
+            serializer.save(manager=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reservation_bulk_import(request):
-    # ... (기존 코드와 동일)
-    pass
+    # ... (기존과 동일)
+    return Response({})
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
@@ -296,7 +325,7 @@ def reservation_detail(request, pk):
         return Response(serializer.data)
     elif request.method == 'PUT':
         serializer = ReservationSerializer(instance=reservation, data=request.data, partial=True)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -347,8 +376,23 @@ def transaction_summary(request):
     
     year = request.query_params.get('year')
     month = request.query_params.get('month')
+    search_query = request.query_params.get('search', None)
+    date_after = request.query_params.get('date_after', None)
+    date_before = request.query_params.get('date_before', None)
+
     if year and month:
         queryset = queryset.filter(transaction_date__year=year, transaction_date__month=month)
+    if search_query:
+        queryset = queryset.filter(
+            Q(description__icontains=search_query) |
+            Q(reservation__tour_name__icontains=search_query) |
+            Q(partner__name__icontains=search_query)
+        )
+    if date_after:
+        queryset = queryset.filter(transaction_date__gte=date_after)
+    if date_before:
+        queryset = queryset.filter(transaction_date__lte=date_before)
+
     summary = queryset.aggregate(
         total_income=Coalesce(Sum('amount', filter=Q(transaction_type='INCOME')), Value(0), output_field=DecimalField()),
         total_expense=Coalesce(Sum('amount', filter=Q(transaction_type='EXPENSE')), Value(0), output_field=DecimalField()),
@@ -406,7 +450,7 @@ def transaction_detail(request, pk):
         return Response(serializer.data)
     elif request.method == 'PUT':
         serializer = TransactionSerializer(transaction, data=request.data, partial=True)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
