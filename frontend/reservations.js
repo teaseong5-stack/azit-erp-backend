@@ -89,6 +89,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         return filters;
     }
 
+    /**
+     * [수정] 총 마진 현황판을 추가하고, API로부터 cost 데이터를 받아 계산합니다.
+     */
     async function updateCategorySummary(filters = {}) {
         currentSummaryFilters = filters;
         const params = new URLSearchParams({ group_by: 'category', ...filters });
@@ -101,14 +104,48 @@ document.addEventListener("DOMContentLoaded", async function() {
                 return;
             }
             const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
-            const salesMap = new Map(summaryData.map(item => [item.category, item.sales]));
+            
+            const dataMap = new Map(summaryData.map(item => [item.category, { sales: item.sales, cost: item.cost }]));
             let totalSales = 0;
+            let totalCost = 0;
+
             Object.entries(categoryLabels).forEach(([key, label]) => {
-                const sales = salesMap.get(key) || 0;
+                const data = dataMap.get(key) || { sales: 0, cost: 0 };
+                const sales = Number(data.sales) || 0;
                 totalSales += sales;
-                categorySummaryCards.innerHTML += `<div class="col"><div class="card"><div class="card-body"><h5 class="card-title">${label}</h5><p class="card-text">${sales.toLocaleString()} VND</p></div></div></div>`;
+                totalCost += (Number(data.cost) || 0);
+
+                categorySummaryCards.innerHTML += `
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">${label}</h5>
+                                <p class="card-text">${sales.toLocaleString()} VND</p>
+                            </div>
+                        </div>
+                    </div>`;
             });
-            categorySummaryCards.innerHTML += `<div class="col"><div class="card bg-dark text-white"><div class="card-body"><h5 class="card-title">총 합계</h5><p class="card-text">${totalSales.toLocaleString()} VND</p></div></div></div>`;
+
+            const totalMargin = totalSales - totalCost;
+
+            categorySummaryCards.innerHTML += `
+                <div class="col">
+                    <div class="card bg-dark text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">총 합계</h5>
+                            <p class="card-text">${totalSales.toLocaleString()} VND</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">총 마진</h5>
+                            <p class="card-text ${totalMargin >= 0 ? '' : 'text-warning'}">${totalMargin.toLocaleString()} VND</p>
+                        </div>
+                    </div>
+                </div>
+            `;
         } catch (error) {
             console.error("카테고리 요약 업데이트 실패:", error);
             toast.error("요약 정보를 불러오는데 실패했습니다.");
@@ -137,13 +174,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-startTime" class="form-label">시작 시간</label>
                         <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group grid-span-2">
                         <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
                         <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label for="${prefix}-dropoffLocation" class="form-label">샌딩 장소</label>
-                        <input type="text" class="form-control" id="${prefix}-dropoffLocation" value="${details.dropoffLocation || ''}">
                     </div>
                     ${commonFields}
                 `;
@@ -207,6 +240,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-players" class="form-label">인원수</label>
                         <input type="number" class="form-control" id="${prefix}-players" value="${details.players || 0}">
                     </div>
+                    <div class="form-group"></div> <!-- Placeholder for 4-column grid -->
+                    ${commonFields}
                 `;
             case 'TICKET':
             case 'OTHER':
@@ -215,6 +250,8 @@ document.addEventListener("DOMContentLoaded", async function() {
                         <label for="${prefix}-usageTime" class="form-label">이용 시간</label>
                         <input type="time" class="form-control" id="${prefix}-usageTime" value="${details.usageTime || ''}">
                     </div>
+                    <div class="form-group"></div> <!-- Placeholder -->
+                    <div class="form-group"></div> <!-- Placeholder -->
                     ${commonFields}
                 `;
             default:
@@ -245,7 +282,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         return `
             <form id="${prefix}-form" class="reservation-form-layout">
-                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-grid form-grid--4-col">
@@ -287,7 +323,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
-                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
                     <div class="form-grid form-grid--4-col" id="${prefix}-details-container">
@@ -295,7 +330,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
 
-                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-grid form-grid--4-col">
@@ -325,15 +359,14 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
                 
-                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
                     <div class="form-grid form-grid--1-col">
-                        <div class="form-group">
+                         <div class="form-group grid-span-2">
                             <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
                             <textarea class="form-control" id="${prefix}-requests" rows="2">${data.requests || ''}</textarea>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group grid-span-2">
                             <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
                             <textarea class="form-control" id="${prefix}-notes" rows="2">${data.notes || ''}</textarea>
                         </div>
@@ -344,9 +377,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             </form>
         `;
     }
-
-    // --- 3. 핵심 로직 함수 ---
-
+    
     async function fetchAllInitialData() {
         try {
             const [customersRes, usersRes] = await Promise.all([
@@ -413,8 +444,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // --- 4. 이벤트 처리 ---
-
     function getFiltersFromInputs() {
         const filters = {
             category: filterCategory.value,
@@ -428,27 +457,19 @@ document.addEventListener("DOMContentLoaded", async function() {
         return filters;
     }
 
-    summaryFilterButton.addEventListener('click', () => {
-        updateCategorySummary(getSummaryFiltersFromInputs());
-    });
-
+    summaryFilterButton.addEventListener('click', () => updateCategorySummary(getSummaryFiltersFromInputs()));
     summaryFilterReset.addEventListener('click', () => {
         initializeSummaryFilters();
         summaryFilterStartDate.value = '';
         summaryFilterEndDate.value = '';
         updateCategorySummary(getSummaryFiltersFromInputs());
     });
-
-    filterButton.addEventListener('click', () => {
-        populateReservations(1, getFiltersFromInputs());
-    });
-
+    filterButton.addEventListener('click', () => populateReservations(1, getFiltersFromInputs()));
     showNewReservationModalButton.addEventListener('click', () => {
         newReservationFormContainer.innerHTML = renderFormFields('new-reservation', {});
         newReservationModalEl.show();
         setupFormEventListeners('new-reservation');
     });
-
     reservationListTable.addEventListener('click', async (event) => {
         const target = event.target;
         const reservationId = target.dataset.id;
@@ -469,7 +490,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             }
         }
     });
-
     exportCsvButton.addEventListener('click', async () => {
         const params = new URLSearchParams(getFiltersFromInputs());
         try {
@@ -489,7 +509,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             toast.error("CSV 파일을 다운로드하는 데 실패했습니다.");
         }
     });
-
     prevPageButton.addEventListener('click', () => populateReservations(currentPage - 1, currentFilters));
     nextPageButton.addEventListener('click', () => populateReservations(currentPage + 1, currentFilters));
     
@@ -624,7 +643,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                     toast.error("유효한 고객을 선택해주세요.");
                     return;
                 }
-
+                
                 const updatedData = {
                     customer_id: customerId,
                     tour_name: form.querySelector('#edit-reservation-tour_name').value,
@@ -712,7 +731,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         await fetchAllInitialData();
         await updateCategorySummary(getSummaryFiltersFromInputs());
         await populateReservations(1, {});
-
+        
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
         const reservationId = urlParams.get('id');
