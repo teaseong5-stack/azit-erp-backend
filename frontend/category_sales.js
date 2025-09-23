@@ -38,58 +38,62 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     /**
-     * 서버에서 카테고리별 요약 데이터를 가져와 차트와 테이블을 업데이트하는 함수
-     * @param {string} year - 조회할 년도
-     * @param {string} month - 조회할 월
+     * 서버에서 카테고리별 요약 데이터를 가져와 차트와 테이블(매출 비중 포함)을 업데이트하는 함수
      */
     async function updateDashboard(year, month) {
         const params = new URLSearchParams({ group_by: 'category' });
         if (year) params.append('year', year);
         if (month) params.append('month', month);
 
-        const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
-        
-        // 데이터가 없을 경우 처리
-        if (!summaryData || summaryData.length === 0) {
-            categorySalesTable.innerHTML = '<tr><td colspan="2" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
-            if (categoryPieChart) {
-                categoryPieChart.destroy();
-                categoryPieChart = null;
+        try {
+            const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
+            
+            if (!summaryData || summaryData.length === 0) {
+                categorySalesTable.innerHTML = '<tr><td colspan="3" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
+                if (categoryPieChart) {
+                    categoryPieChart.destroy();
+                    categoryPieChart = null;
+                }
+                categoryPieChartCanvas.getContext('2d').clearRect(0, 0, categoryPieChartCanvas.width, categoryPieChartCanvas.height);
+                return;
             }
-            return;
+            
+            // 매출 비중을 계산하기 위해 총 매출액을 먼저 구합니다.
+            const totalSales = summaryData.reduce((sum, item) => sum + Number(item.sales), 0);
+
+            const labels = summaryData.map(item => categoryLabels[item.category] || item.category);
+            const data = summaryData.map(item => item.sales);
+            const backgroundColors = summaryData.map(item => categoryColors[item.category] || '#6c757d');
+
+            if (categoryPieChart) categoryPieChart.destroy();
+            categoryPieChart = new Chart(categoryPieChartCanvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{ data: data, backgroundColor: backgroundColors }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            categorySalesTable.innerHTML = '';
+            summaryData.forEach(item => {
+                const row = categorySalesTable.insertRow();
+                // 각 카테고리의 매출 비중을 계산합니다.
+                const percentage = totalSales > 0 ? ((Number(item.sales) / totalSales) * 100).toFixed(1) : 0;
+                row.innerHTML = `
+                    <td><a href="#" class="category-detail-link" data-category="${item.category}">${categoryLabels[item.category] || item.category}</a></td>
+                    <td>${Number(item.sales).toLocaleString()} VND</td>
+                    <td>${percentage}%</td>
+                `;
+            });
+        } catch (error) {
+            console.error("대시보드 업데이트 실패:", error);
+            toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
         }
-        
-        const labels = summaryData.map(item => categoryLabels[item.category] || item.category);
-        const data = summaryData.map(item => item.sales);
-        const backgroundColors = summaryData.map(item => categoryColors[item.category] || '#6c757d');
-
-        // 차트 렌더링
-        if (categoryPieChart) categoryPieChart.destroy();
-        categoryPieChart = new Chart(categoryPieChartCanvas.getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{ data: data, backgroundColor: backgroundColors }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        // 테이블 렌더링
-        categorySalesTable.innerHTML = '';
-        summaryData.forEach(item => {
-            const row = categorySalesTable.insertRow();
-            row.innerHTML = `
-                <td><a href="#" class="category-detail-link" data-category="${item.category}">${categoryLabels[item.category] || item.category}</a></td>
-                <td>${Number(item.sales).toLocaleString()} VND</td>
-            `;
-        });
     }
 
     /**
      * 특정 카테고리의 상품별 매출 상세 내역을 팝업으로 보여주는 함수
-     * @param {string} category - 상세 조회할 카테고리
-     * @param {string} year - 현재 필터링된 년도
-     * @param {string} month - 현재 필터링된 월
      */
     async function showProductDetails(category, year, month) {
         detailModalTitle.textContent = `${categoryLabels[category] || category} 상품별 매출 현황`;
@@ -100,19 +104,24 @@ document.addEventListener("DOMContentLoaded", function() {
         if (year) params.append('year', year);
         if (month) params.append('month', month);
 
-        const productData = await window.apiFetch(`reservations/summary?${params.toString()}`);
-        
-        let tableHtml = '<table class="table table-striped"><thead><tr><th>상품명</th><th>매출액 (VND)</th><th>건수</th></tr></thead><tbody>';
-        
-        if (productData && productData.length > 0) {
-            productData.forEach(item => {
-                tableHtml += `<tr><td>${item.product}</td><td>${Number(item.sales).toLocaleString()}</td><td>${item.count}</td></tr>`;
-            });
-        } else {
-            tableHtml += '<tr><td colspan="3" class="text-center">데이터가 없습니다.</td></tr>';
+        try {
+            const productData = await window.apiFetch(`reservations/summary?${params.toString()}`);
+            
+            let tableHtml = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>상품명</th><th>매출액 (VND)</th><th>건수</th></tr></thead><tbody>';
+            
+            if (productData && productData.length > 0) {
+                productData.forEach(item => {
+                    tableHtml += `<tr><td>${item.product}</td><td>${Number(item.sales).toLocaleString()}</td><td>${item.count}</td></tr>`;
+                });
+            } else {
+                tableHtml += '<tr><td colspan="3" class="text-center">데이터가 없습니다.</td></tr>';
+            }
+            tableHtml += '</tbody></table></div>';
+            detailModalBody.innerHTML = tableHtml;
+        } catch (error) {
+            console.error("상품 상세 정보 로딩 실패:", error);
+            detailModalBody.innerHTML = '<p class="text-center text-danger">상세 정보를 불러오는 중 오류가 발생했습니다.</p>';
         }
-        tableHtml += '</tbody></table>';
-        detailModalBody.innerHTML = tableHtml;
     }
     
     // '조회' 버튼 이벤트 리스너

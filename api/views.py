@@ -17,7 +17,7 @@ from .serializers import (
     PartnerSerializer, TransactionSerializer, UserRegisterSerializer
 )
 
-# --- [수정] 리포트 페이지 전용 요약 API ---
+# --- 리포트 페이지 전용 요약 API ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
@@ -27,8 +27,6 @@ def report_summary(request):
     """
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
-    # ▼▼▼▼▼ [수정] 이 부분이 수정/추가되었습니다 ▼▼▼▼▼
-    # reservation_list 뷰와 동일하게 모든 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
@@ -41,15 +39,11 @@ def report_summary(request):
         queryset = queryset.filter(category=category)
     if search:
         queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
-    
-    # [추가] 누락되었던 년/월 필터링 로직
     if year:
         queryset = queryset.filter(start_date__year=year)
     if month:
         queryset = queryset.filter(start_date__month=month)
-    # ▲▲▲▲▲ [수정] 이 부분이 수정/추가되었습니다 ▲▲▲▲▲
 
-    # 집계 연산
     totals = queryset.aggregate(
         total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
         total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
@@ -92,7 +86,6 @@ def user_list(request):
 def export_reservations_csv(request):
     queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
     
-    # [수정] CSV 내보내기에도 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
@@ -204,7 +197,6 @@ def reservation_bulk_delete(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_list_all(request):
-    # [수정] 필터링 기능을 `all` API에도 적용
     queryset = Reservation.objects.select_related('customer', 'manager').all()
     
     manager_id = request.query_params.get('manager', None)
@@ -233,11 +225,11 @@ def reservation_list_all(request):
 def reservation_summary(request):
     queryset = Reservation.objects.exclude(status='CANCELED')
     
-    # 기간 필터
     year = request.query_params.get('year')
     month = request.query_params.get('month')
     start_date = request.query_params.get('start_date__gte')
     end_date = request.query_params.get('start_date__lte')
+    category = request.query_params.get('category')
 
     if year:
         queryset = queryset.filter(start_date__year=year)
@@ -247,7 +239,9 @@ def reservation_summary(request):
         queryset = queryset.filter(start_date__gte=start_date)
     if end_date:
         queryset = queryset.filter(start_date__lte=end_date)
-
+    if category:
+        queryset = queryset.filter(category=category)
+        
     group_by = request.query_params.get('group_by')
     
     if group_by == 'category':
@@ -256,10 +250,26 @@ def reservation_summary(request):
             cost=Coalesce(Sum('total_cost'), 0)
         ).order_by('category')
         return Response(summary)
+    
+    elif group_by == 'product':
+        summary = queryset.values('tour_name').annotate(
+            sales=Coalesce(Sum('total_price'), 0),
+            count=Count('id')
+        ).order_by('-sales')
+        
+        return Response([{'product': item['tour_name'], 'sales': item['sales'], 'count': item['count']} for item in summary])
 
-    # ... (다른 group_by 로직은 생략)
+    elif group_by == 'manager':
+        summary = queryset.values('manager__username').annotate(
+            sales=Coalesce(Sum('total_price'), 0), 
+            count=Count('id')
+        ).order_by('-sales')
+        return Response([
+            {'manager': item['manager__username'] or '미지정', 'sales': item['sales'], 'count': item['count']} 
+            for item in summary
+        ])
+        
     return Response({})
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -300,18 +310,98 @@ def reservation_list(request):
         return paginator.get_paginated_response(serializer.data)
 
     elif request.method == 'POST':
-        # ... (POST 로직은 동일)
         serializer = ReservationSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            serializer.save(manager=request.user)
+            manager = request.user
+            if request.user.is_superuser and 'manager_id' in request.data:
+                try:
+                    manager = User.objects.get(pk=request.data['manager_id'])
+                except User.DoesNotExist:
+                    pass # Keep default manager if not found
+            serializer.save(manager=manager)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reservation_bulk_import(request):
-    # ... (기존과 동일)
-    return Response({})
+    data = request.data
+    if not isinstance(data, list):
+        return Response({"error": "입력값은 반드시 리스트 형태여야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    create_count = 0
+    update_count = 0
+    errors = []
+    
+    for item in data:
+        manager_id = item.get('manager_id')
+        manager = None
+        if manager_id:
+            try:
+                manager = User.objects.get(pk=manager_id)
+            except User.DoesNotExist:
+                pass
+        if not manager:
+            manager = request.user
+
+        customer_id = item.get('customer_id')
+        reservation_date = item.get('reservation_date')
+        start_date = item.get('start_date')
+        category = item.get('category')
+        tour_name = item.get('tour_name')
+
+        should_update = all([customer_id, reservation_date, start_date, category, tour_name])
+
+        try:
+            if should_update:
+                reservation, created = Reservation.objects.update_or_create(
+                    customer_id=customer_id,
+                    reservation_date=reservation_date,
+                    start_date=start_date,
+                    category=category,
+                    tour_name=tour_name,
+                    defaults={
+                        'total_cost': item.get('total_cost', 0),
+                        'total_price': item.get('total_price', 0),
+                        'payment_amount': item.get('payment_amount', 0),
+                        'status': item.get('status', 'PENDING'),
+                        'manager': manager,
+                        'details': item.get('details', {}),
+                        'requests': item.get('requests', ''),
+                        'notes': item.get('notes', '')
+                    }
+                )
+                if created:
+                    create_count += 1
+                else:
+                    update_count += 1
+            else:
+                serializer = ReservationSerializer(data=item)
+                if serializer.is_valid():
+                    serializer.save(manager=manager)
+                    create_count += 1
+                else:
+                    errors.append({"data": item, "errors": serializer.errors})
+
+        except Exception as e:
+            errors.append({"data": item, "errors": str(e)})
+            
+    message_parts = []
+    if create_count > 0:
+        message_parts.append(f"{create_count}건 신규 등록")
+    if update_count > 0:
+        message_parts.append(f"{update_count}건 덮어쓰기")
+    if len(errors) > 0:
+        message_parts.append(f"{len(errors)}건 실패")
+    message = ", ".join(message_parts) + " 완료."
+
+    if errors:
+        return Response({
+            "message": message,
+            "errors": errors
+        }, status=status.HTTP_207_MULTI_STATUS)
+        
+    return Response({"message": message}, status=status.HTTP_201_CREATED)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
