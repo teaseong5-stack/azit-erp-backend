@@ -21,10 +21,6 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
-    """
-    리포트 페이지의 요약 카드 데이터를 생성하는 API.
-    전달된 모든 필터(년, 월 포함)를 적용하여 총합계를 계산합니다.
-    """
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
     manager_id = request.query_params.get('manager', None)
@@ -45,8 +41,8 @@ def report_summary(request):
         queryset = queryset.filter(start_date__month=month)
 
     totals = queryset.aggregate(
-        total_sales=Coalesce(Sum('total_price'), Value(0), output_field=DecimalField()),
-        total_cost=Coalesce(Sum('total_cost'), Value(0), output_field=DecimalField())
+        total_sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
+        total_cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField()))
     )
     totals['total_margin'] = totals['total_sales'] - totals['total_cost']
     
@@ -219,7 +215,6 @@ def reservation_list_all(request):
     serializer = ReservationSerializer(queryset.order_by('-reservation_date'), many=True)
     return Response({'results': serializer.data})
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
@@ -244,16 +239,18 @@ def reservation_summary(request):
         
     group_by = request.query_params.get('group_by')
     
+    # ▼▼▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼▼▼
     if group_by == 'category':
         summary = queryset.values('category').annotate(
-            sales=Coalesce(Sum('total_price'), 0),
-            cost=Coalesce(Sum('total_cost'), 0)
+            sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
+            cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField()))
         ).order_by('category')
         return Response(summary)
+    # ▲▲▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲▲▲
     
     elif group_by == 'product':
         summary = queryset.values('tour_name').annotate(
-            sales=Coalesce(Sum('total_price'), 0),
+            sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             count=Count('id')
         ).order_by('-sales')
         
@@ -261,7 +258,7 @@ def reservation_summary(request):
 
     elif group_by == 'manager':
         summary = queryset.values('manager__username').annotate(
-            sales=Coalesce(Sum('total_price'), 0), 
+            sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())), 
             count=Count('id')
         ).order_by('-sales')
         return Response([
@@ -317,7 +314,7 @@ def reservation_list(request):
                 try:
                     manager = User.objects.get(pk=request.data['manager_id'])
                 except User.DoesNotExist:
-                    pass # Keep default manager if not found
+                    pass
             serializer.save(manager=manager)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
