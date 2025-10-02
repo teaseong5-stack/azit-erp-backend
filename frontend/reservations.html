@@ -8,21 +8,21 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 사이드바 메뉴 -->
+    <!-- 사이드바 (최신 버전으로 동기화) -->
     <nav class="sidebar">
         <div class="sidebar-header"><h3><i class="bi bi-house-heart-fill me-2"></i>아지트 ERP</h3></div>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link active" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
+                <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-fill me-2"></i>대시보드</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="customers.html"><i class="bi bi-people-fill me-2"></i>고객 관리</a>
             </li>
             <li class="nav-item has-submenu">
-                <a class="nav-link" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
-                <ul class="submenu">
+                <a class="nav-link active" href="reservations.html"><i class="bi bi-calendar-check-fill me-2"></i>예약 관리</a>
+                <ul class="submenu" style="display: block;">
                     <li><a class="nav-link" href="reservations.html?action=new">새 예약 등록</a></li>
-                    <li><a class="nav-link" href="reservations.html">예약 목록</a></li>
+                    <li><a class="nav-link active" href="reservations.html">예약 목록</a></li>
                     <li><a class="nav-link" href="bulk_upload.html">일괄 등록</a></li>
                 </ul>
             </li>
@@ -65,65 +65,55 @@
                 <h5 class="mb-3">매출 현황 요약</h5>
                 
                 <div class="row g-2 mb-4 align-items-center">
+                    <div class="col-md-auto"><select id="summary-filter-year" class="form-select form-select-sm"></select></div>
                     <div class="col-md-auto">
-                        <label for="summary-filter-year" class="form-label visually-hidden">년도</label>
-                        <select id="summary-filter-year" class="form-select form-select-sm"></select>
-                    </div>
-                    <div class="col-md-auto">
-                        <label for="summary-filter-month" class="form-label visually-hidden">월</label>
                         <select id="summary-filter-month" class="form-select form-select-sm">
                             <option value="">-- 전체 월 --</option>
                         </select>
                     </div>
-                    <div class="col-auto">
-                        <span class="text-muted small">또는 기간 조회 (우선 적용):</span>
-                    </div>
+                    <div class="col-auto"><span class="text-muted small">또는 기간 조회 (우선 적용):</span></div>
                     <div class="col-md-3 d-flex align-items-center">
-                        <label for="summary-filter-start-date" class="form-label visually-hidden">시작일</label>
                         <input type="date" id="summary-filter-start-date" class="form-control form-control-sm">
                         <span class="mx-2">~</span>
-                        <label for="summary-filter-end-date" class="form-label visually-hidden">종료일</label>
                         <input type="date" id="summary-filter-end-date" class="form-control form-control-sm">
                     </div>
-                    <div class="col-md-auto">
-                        <button id="summary-filter-button" class="btn btn-secondary btn-sm w-100"><i class="bi bi-bar-chart-line me-2"></i>현황 조회</button>
-                    </div>
-                    <div class="col-md-auto">
-                        <button id="summary-filter-reset" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-clockwise me-2"></i>초기화</button>
-                    </div>
+                    <div class="col-md-auto"><button id="summary-filter-button" class="btn btn-secondary btn-sm w-100"><i class="bi bi-bar-chart-line me-2"></i>현황 조회</button></div>
+                    <div class="col-md-auto"><button id="summary-filter-reset" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-clockwise me-2"></i>초기화</button></div>
                 </div>
 
-                <div class="row row-cols-2 row-cols-md-4 row-cols-lg-auto g-1 mb-4" id="category-summary-cards">
+                <div class="row row-cols-2 row-cols-lg-auto g-3" id="category-summary-cards">
                     <!-- 카드들은 여기에 동적으로 생성됩니다. -->
                 </div>
 
-                <hr>
+                <hr class="my-4">
                 
                 <h5 class="mt-4">예약 목록 조회</h5>
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="row g-3 flex-grow-1">
-                        <div class="col-md-2"><select id="filter-category" class="form-select"><option value="">-- 전체 카테고리 --</option><option value="TOUR">투어</option><option value="RENTAL_CAR">렌터카</option><option value="ACCOMMODATION">숙박</option><option value="GOLF">골프</option><option value="TICKET">티켓</option><option value="OTHER">기타</option></select></div>
-                        <!-- ▼▼▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼▼▼ -->
-                    <div class="col-md-2">
-                        <label for="filter-date-type" class="form-label visually-hidden">날짜 기준</label>
-                        <select id="filter-date-type" class="form-select">
-                            <option value="start_date">시작일 기준</option>
-                            <option value="reservation_date">예약일 기준</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label for="filter-start-date" class="form-label visually-hidden">시작일</label>
-                        <input type="date" id="filter-start-date" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label for="filter-end-date" class="form-label visually-hidden">종료일</label>
-                        <input type="date" id="filter-end-date" class="form-control">
-                    </div>
-                    <!-- ▲▲▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲▲▲ -->
-                        <div class="col-md-1"><div class="d-grid"><button id="filter-button" class="btn btn-primary">조회</button></div></div>
+                    <div class="row g-2 flex-grow-1 align-items-center">
+                        <div class="col-md-2">
+                            <select id="filter-category" class="form-select">
+                                <option value="">-- 전체 카테고리 --</option>
+                                <option value="TOUR">투어</option><option value="RENTAL_CAR">렌터카</option><option value="ACCOMMODATION">숙박</option>
+                                <option value="GOLF">골프</option><option value="TICKET">티켓</option><option value="OTHER">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><input type="text" id="filter-search" class="form-control" placeholder="상품명, 고객명 검색"></div>
+                        
+                        <!-- ▼▼▼ [수정] 이 부분이 수정/추가되었습니다 ▼▼▼ -->
+                        <div class="col-md-2">
+                            <select id="filter-date-type" class="form-select">
+                                <option value="start_date">시작일 기준</option>
+                                <option value="reservation_date">예약일 기준</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><input type="date" id="filter-start-date" class="form-control"></div>
+                        <div class="col-md-2"><input type="date" id="filter-end-date" class="form-control"></div>
+                        <!-- ▲▲▲ [수정] 이 부분이 수정/추가되었습니다 ▲▲▲ -->
+                        
+                        <div class="col-md-auto"><div class="d-grid"><button id="filter-button" class="btn btn-primary">조회</button></div></div>
                     </div>
                     <div class="ms-3">
-                        <button class="btn btn-danger" id="bulk-delete-button"><i class="bi bi-trash-fill me-2"></i>선택 삭제</button>
+                        <button class="btn btn-danger" id="bulk-delete-button" disabled><i class="bi bi-trash-fill me-2"></i>선택 삭제</button>
                     </div>
                 </div>
                 
@@ -132,30 +122,17 @@
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="select-all-checkbox" class="form-check-input"></th>
-                                <!-- [수정] 실제 데이터 순서와 일치하도록 컬럼 순서 재조정 -->
-                                <th>고객명</th>
-                                <th>예약일</th>
-                                <th>시작일</th>
-                                <th>카테고리</th>
-                                <th>상품명</th>
-                                <th>매입가</th>
-                                <th>판매가</th>
-                                <th>마진</th>
-                                <th>상태</th>
-                                <th>담당</th>
-                                <th>관리</th>
+                                <th>고객명</th><th>예약일</th><th>시작일</th><th>카테고리</th>
+                                <th>상품명</th><th>매입가</th><th>판매가</th><th>마진</th>
+                                <th>상태</th><th>담당</th><th>관리</th>
                             </tr>
                         </thead>
                         <tbody id="reservation-list-table"></tbody>
                     </table>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-3">
-                     <div style="min-width: 150px;">
-                         <span id="page-info"></span>
-                     </div>
-                    <nav>
-                        <ul class="pagination" id="pagination-container" style="margin-bottom: 0;"></ul>
-                    </nav>
+                       <div style="min-width: 150px;"><span id="page-info"></span></div>
+                    <nav><ul class="pagination" id="pagination-container" style="margin-bottom: 0;"></ul></nav>
                     <div style="min-width: 150px; text-align: right;">
                         <button id="prev-page-button" class="btn btn-outline-secondary">이전</button>
                         <button id="next-page-button" class="btn btn-outline-secondary">다음</button>
@@ -165,14 +142,13 @@
         </div>
     </main>
 
-    <div class="modal fade" id="newReservationModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">새 예약 등록</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="new-reservation-form-container"></div></div></div>
-    </div>
-    <div class="modal fade" id="reservationModal" tabindex="-1">
-        <div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="modal-title">예약 정보</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer"><div id="modal-extra-buttons" class="me-auto"></div><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button><button type="button" class="btn btn-primary" id="modal-save-button">변경사항 저장</button></div></div></div>
-    </div>
+    <!-- 새 예약/수정 모달 -->
+    <div class="modal fade" id="newReservationModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">새 예약 등록</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="new-reservation-form-container"></div></div></div></div>
+    <div class="modal fade" id="reservationModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="modal-title">예약 정보</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer"><div id="modal-extra-buttons" class="me-auto"></div><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button><button type="button" class="btn btn-primary" id="modal-save-button">변경사항 저장</button></div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="common.js" defer></script>
     <script src="reservations.js" defer></script>
 </body>
