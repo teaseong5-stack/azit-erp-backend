@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     // 목록 필터 요소
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
+    const filterDateType = document.getElementById('filter-date-type');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
@@ -129,9 +130,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
     
-    /**
-     * [수정] 카테고리별 상세 정보 필드 HTML을 요청된 레이아웃에 맞게 반환합니다.
-     */
     function getCategoryFields(prefix, category, details = {}) {
         const commonFields = `
             <div class="form-group">
@@ -241,9 +239,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    /**
-     * [수정] 요청사항에 맞게 팝업창의 전체 HTML 구조를 4열 그리드 기반으로 재구성합니다.
-     */
     function renderFormFields(prefix, data = {}) {
         const details = data.details || {};
         const category = data.category || 'TOUR';
@@ -366,7 +361,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         `;
     }
     
-    // --- 3. 핵심 로직 함수 (생략 없이 전체 포함) ---
+    // --- 3. 핵심 로직 함수 ---
     async function fetchAllInitialData() {
         try {
             const [customersRes, usersRes] = await Promise.all([
@@ -433,14 +428,19 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // --- 4. 이벤트 처리 (생략 없이 전체 포함) ---
+    // --- 4. 이벤트 처리 ---
     function getFiltersFromInputs() {
         const filters = {
             category: filterCategory.value,
             search: filterSearch.value.trim(),
-            start_date__gte: filterStartDate.value,
-            start_date__lte: filterEndDate.value,
         };
+        const dateType = filterDateType.value;
+        const startDate = filterStartDate.value;
+        const endDate = filterEndDate.value;
+        if (startDate && endDate) {
+            filters[`${dateType}__gte`] = startDate;
+            filters[`${dateType}__lte`] = endDate;
+        }
         for (const key in filters) {
             if (!filters[key]) delete filters[key];
         }

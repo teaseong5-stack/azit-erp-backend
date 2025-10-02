@@ -103,9 +103,23 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="row g-3 flex-grow-1">
                         <div class="col-md-2"><select id="filter-category" class="form-select"><option value="">-- 전체 카테고리 --</option><option value="TOUR">투어</option><option value="RENTAL_CAR">렌터카</option><option value="ACCOMMODATION">숙박</option><option value="GOLF">골프</option><option value="TICKET">티켓</option><option value="OTHER">기타</option></select></div>
-                        <div class="col-md-3"><input type="text" id="filter-search" class="form-control" placeholder="상품명, 고객명으로 검색"></div>
-                        <div class="col-md-3"><input type="date" id="filter-start-date" class="form-control"></div>
-                        <div class="col-md-3"><input type="date" id="filter-end-date" class="form-control"></div>
+                        <!-- ▼▼▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼▼▼ -->
+                    <div class="col-md-2">
+                        <label for="filter-date-type" class="form-label visually-hidden">날짜 기준</label>
+                        <select id="filter-date-type" class="form-select">
+                            <option value="start_date">시작일 기준</option>
+                            <option value="reservation_date">예약일 기준</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filter-start-date" class="form-label visually-hidden">시작일</label>
+                        <input type="date" id="filter-start-date" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filter-end-date" class="form-label visually-hidden">종료일</label>
+                        <input type="date" id="filter-end-date" class="form-control">
+                    </div>
+                    <!-- ▲▲▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲▲▲ -->
                         <div class="col-md-1"><div class="d-grid"><button id="filter-button" class="btn btn-primary">조회</button></div></div>
                     </div>
                     <div class="ms-3">
