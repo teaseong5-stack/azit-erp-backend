@@ -86,22 +86,33 @@ def user_list(request):
 def export_reservations_csv(request):
     queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
     
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
+    # reservation_list와 동일한 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
-    year = request.query_params.get('year', None)
-    month = request.query_params.get('month', None)
     
+    start_date_gte = request.query_params.get('start_date__gte', None)
+    start_date_lte = request.query_params.get('start_date__lte', None)
+    reservation_date_gte = request.query_params.get('reservation_date__gte', None)
+    reservation_date_lte = request.query_params.get('reservation_date__lte', None)
+
     if manager_id:
         queryset = queryset.filter(manager_id=manager_id)
     if category:
         queryset = queryset.filter(category=category)
     if search:
         queryset = queryset.filter(Q(tour_name__icontains=search) | Q(customer__name__icontains=search))
-    if year:
-        queryset = queryset.filter(start_date__year=year)
-    if month:
-        queryset = queryset.filter(start_date__month=month)
+    
+    if start_date_gte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
+    if start_date_lte:
+        queryset = queryset.filter(start_date__isnull=False, start_date__lte=start_date_lte)
+    if reservation_date_gte:
+        queryset = queryset.filter(reservation_date__gte=reservation_date_gte)
+    if reservation_date_lte:
+        queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
@@ -277,12 +288,10 @@ def reservation_list(request):
         base_queryset = Reservation.objects.select_related('customer', 'manager')
         queryset = base_queryset.all()
         
-        # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
         manager_id = request.query_params.get('manager', None)
         category = request.query_params.get('category', None)
         search = request.query_params.get('search', None)
         
-        # 날짜 필터
         start_date_gte = request.query_params.get('start_date__gte', None)
         start_date_lte = request.query_params.get('start_date__lte', None)
         reservation_date_gte = request.query_params.get('reservation_date__gte', None)
@@ -297,7 +306,6 @@ def reservation_list(request):
                 Q(tour_name__icontains=search) | Q(customer__name__icontains=search)
             )
         
-        # 날짜 필터링 로직
         if start_date_gte:
             queryset = queryset.filter(start_date__isnull=False, start_date__gte=start_date_gte)
         if start_date_lte:
@@ -306,7 +314,6 @@ def reservation_list(request):
             queryset = queryset.filter(reservation_date__gte=reservation_date_gte)
         if reservation_date_lte:
             queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
-        # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
 
         paginator = PageNumberPagination()
         paginator.page_size = 50
