@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
             
             if (!summaryData || summaryData.length === 0) {
-                categorySalesTable.innerHTML = '<tr><td colspan="8" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
+                categorySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
                 return;
             }
 
@@ -44,30 +44,27 @@ document.addEventListener("DOMContentLoaded", function() {
             summaryData.forEach(item => {
                 const sales = Number(item.sales);
                 const cost = Number(item.cost);
-                const totalCustomers = Number(item.total_customers) || 0;
                 const count = Number(item.count) || 0;
                 
                 const margin = sales - cost;
                 const marginRate = sales > 0 ? (margin / sales * 100).toFixed(1) : 0;
                 const salesShare = totalSales > 0 ? (sales / totalSales * 100).toFixed(1) : 0;
-                const avgPricePerCustomer = totalCustomers > 0 ? (sales / totalCustomers).toFixed(0) : 0;
 
                 const row = categorySalesTable.insertRow();
                 row.innerHTML = `
                     <td><a href="#" class="category-detail-link" data-category="${item.category}">${categoryLabels[item.category] || item.category}</a></td>
-                    <td>${totalCustomers.toLocaleString()}</td>
+                    <td>${count.toLocaleString()}</td>
                     <td>${cost.toLocaleString()} VND</td>
                     <td>${sales.toLocaleString()} VND</td>
                     <td class="fw-bold ${margin >= 0 ? 'text-primary' : 'text-danger'}">${margin.toLocaleString()} VND</td>
                     <td>${marginRate}%</td>
                     <td>${salesShare}%</td>
-                    <td>${Number(avgPricePerCustomer).toLocaleString()} VND</td>
                 `;
             });
         } catch (error) {
             console.error("데이터 업데이트 실패:", error);
             toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
-            categorySalesTable.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
+            categorySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
         }
     }
     
@@ -85,23 +82,49 @@ document.addEventListener("DOMContentLoaded", function() {
             const detailData = await window.apiFetch(`reservations/summary?${params.toString()}`);
             
             let headers = [];
-            switch (category) {
-                case 'ACCOMMODATION': headers = ['숙소명', '예약건수', '룸수량']; break;
-                case 'GOLF': headers = ['골프장명', '예약건수', '라운딩수량']; break;
-                default: headers = ['상품명', '예약건수', '이용인원']; break;
-            }
-    
             let rowsHtml = '';
-            if (detailData && detailData.length > 0) {
-                detailData.forEach(item => {
-                    rowsHtml += `<tr>
-                        <td>${item.name}</td>
-                        <td>${item.count}</td>
-                        <td>${item.quantity.toLocaleString()}</td>
-                    </tr>`;
-                });
+            let colspan = 2;
+
+            if (category === 'ACCOMMODATION') {
+                headers = ['숙소명', '예약건수', '룸수량'];
+                colspan = 3;
+                if (detailData && detailData.length > 0) {
+                    detailData.forEach(item => {
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.count}</td>
+                            <td>${item.quantity.toLocaleString()}</td>
+                        </tr>`;
+                    });
+                }
+            } else if (category === 'GOLF') {
+                headers = ['골프장명', '예약건수', '라운딩 수량'];
+                colspan = 3;
+                if (detailData && detailData.length > 0) {
+                    detailData.forEach(item => {
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.count}</td>
+                            <td>${item.quantity.toLocaleString()}</td>
+                        </tr>`;
+                    });
+                }
             } else {
-                rowsHtml = '<tr><td colspan="3" class="text-center">데이터가 없습니다.</td></tr>';
+                const nameHeader = (category === 'RENTAL_CAR') ? '상품명(차량별)' : '상품명';
+                headers = [nameHeader, '예약건수'];
+                colspan = 2;
+                if (detailData && detailData.length > 0) {
+                    detailData.forEach(item => {
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.count}</td>
+                        </tr>`;
+                    });
+                }
+            }
+            
+            if (!rowsHtml) {
+                rowsHtml = `<tr><td colspan="${colspan}" class="text-center">데이터가 없습니다.</td></tr>`;
             }
     
             const tableHtml = `
