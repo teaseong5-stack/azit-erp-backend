@@ -4,15 +4,15 @@
 body {
     display: flex;
     min-height: 100vh;
-    background-color: #f8f9fa; /* 밝은 회색 배경 */
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    background-color: #f8f9fa;
+    font-family: 'Pretendard', sans-serif;
 }
 
 /* --- Sidebar --- */
 .sidebar {
     width: 280px;
     min-height: 100vh;
-    background-color: #212529; /* 더 깊은 다크 컬러 */
+    background-color: #212529;
     padding-top: 1.25rem;
     position: fixed;
     top: 0;
@@ -21,14 +21,14 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 1030;
-    transition: transform 0.3s ease; /* 부드러운 애니메이션 효과 */
+    transition: transform 0.3s ease;
 }
 
 .sidebar .sidebar-header {
     color: #fff;
     padding: 0 1.5rem 1.25rem 1.5rem;
     font-size: 1.5em;
-    font-weight: 600; /* 헤더 폰트 굵게 */
+    font-weight: 600;
     border-bottom: 1px solid #343a40;
     display: flex;
     align-items: center;
@@ -54,15 +54,11 @@ body {
 .sidebar .nav-link.active,
 .sidebar .nav-link:hover {
     color: #fff;
-    background-color: #0d6efd; /* 포인트 컬러로 변경 */
+    background-color: #0d6efd;
 }
 
 /* --- Submenu --- */
-.nav-item.has-submenu {
-    position: relative;
-}
-
-.submenu {
+.nav-item.has-submenu .submenu {
     display: none;
     list-style: none;
     padding-left: 0;
@@ -75,7 +71,7 @@ body {
 }
 
 .submenu li a.nav-link {
-    padding-left: 3.5rem; /* 들여쓰기 */
+    padding-left: 3.5rem;
     font-size: 0.95em;
 }
 
@@ -85,148 +81,34 @@ body {
     padding: 2.5rem;
     width: calc(100% - 280px);
     transition: margin-left 0.3s ease;
-    animation: fadeIn 0.5s ease-in-out; /* 부드러운 화면 전환 효과 */
+    animation: fadeIn 0.5s ease-in-out;
 }
 
-.content h1, .content h2, .content h3, .content h4, .content h5 {
-    font-weight: 600; /* 모든 제목 폰트 굵게 */
-}
-
-/* --- Keyframe for fade-in effect --- */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Cards --- */
+/* --- General Components --- */
 .card {
     border: none;
-    border-radius: 0.75rem; /* 둥근 모서리 강조 */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* 기본 그림자 */
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-.card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08); /* 호버 시 그림자 강조 */
-}
-
-/* --- Modals (Popups) --- */
 .modal-content {
     border-radius: 0.75rem;
     border: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* 입체감을 위한 깊은 그림자 */
-}
-
-.modal-header {
-    border-bottom: 1px solid #f1f3f5;
-}
-
-.modal-footer {
-    border-top: 1px solid #f1f3f5;
-}
-
-/* --- Buttons --- */
-.btn {
-    font-weight: 500;
-    border-radius: 0.5rem;
-    transition: all 0.2s ease-in-out;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-/* --- Mobile Responsive --- */
-@media (max-width: 991.98px) {
-    .sidebar {
-        transform: translateX(-100%);
-    }
-    .sidebar.show {
-        transform: translateX(0);
-        box-shadow: 0 0 2rem rgba(0,0,0,.15);
-    }
-    .content {
-        margin-left: 0;
-        width: 100%;
-        padding: 1.5rem;
-    }
 }
 
 /* --- Report Detail Popup Table Style --- */
-#reportDetailModal .table {
+#detailModal .table {
     table-layout: fixed;
     width: 100%;
 }
 
-#reportDetailModal .table td,
-#reportDetailModal .table th {
+#detailModal .table td,
+#detailModal .table th {
     word-wrap: break-word; /* 내용이 길 경우 자동 줄바꿈 */
     white-space: normal;
-}
-
-
-/* --- Reservation Page Specific Styles --- */
-/* (This section is now handled by the new popup layout section below) */
-
-
-/* --- [수정] Reservation Form Popup Layout --- */
-
-.reservation-form-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem; /* 섹션 사이의 수직 간격 */
-}
-
-.reservation-form-layout .form-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem; /* 섹션 제목과 그리드 사이의 간격 */
-}
-
-.reservation-form-layout .form-section-title {
-    margin-bottom: 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 1.1rem;
-    color: #0d6efd;
-}
-
-.reservation-form-layout .form-grid {
-    display: grid;
-    gap: 1rem 1.5rem; /* 필드 사이의 간격 (세로, 가로) */
-}
-
-/* 컬럼 레이아웃 클래스 */
-.reservation-form-layout .form-grid--2-col {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-.reservation-form-layout .form-grid--3-col {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-.reservation-form-layout .form-grid--4-col {
-    grid-template-columns: repeat(4, 1fr);
-}
-
-.reservation-form-layout .form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* 반응형: 화면 크기에 따라 컬럼 수 조절 */
-@media (max-width: 1199.98px) { /* 태블릿 사이즈 */
-    .reservation-form-layout .form-grid--3-col,
-    .reservation-form-layout .form-grid--4-col {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-@media (max-width: 767.98px) { /* 모바일 사이즈 */
-    .reservation-form-layout .form-grid--2-col,
-    .reservation-form-layout .form-grid--3-col,
-    .reservation-form-layout .form-grid--4-col {
-        grid-template-columns: 1fr;
-    }
 }

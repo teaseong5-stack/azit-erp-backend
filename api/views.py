@@ -246,23 +246,54 @@ def reservation_summary(request):
         
     group_by = request.query_params.get('group_by')
     
-    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
-    # '총 이용 고객 수' 관련 로직을 모두 제거하고, 예약 건수(count)만 계산합니다.
     if group_by == 'category':
+        queryset = queryset.annotate(
+            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
+        )
         summary = queryset.values('category').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
-            count=Count('id')
+            count=Count('id'),
+            total_customers=Coalesce(Sum('customers'), 0)
         ).order_by('category')
         return Response(summary)
     
     elif group_by == 'product':
-        summary = queryset.values('tour_name').annotate(
-            sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
-            count=Count('id')
-        ).order_by('-sales')
+        category_filter = request.query_params.get('category')
+        if not category_filter:
+            return Response({"error": "Category is required for product summary"}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = queryset.filter(category=category_filter).values('tour_name')
+
+        if category_filter == 'ACCOMMODATION':
+            summary = queryset.annotate(
+                count=Count('id'),
+                quantity=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0)
+            ).order_by('-count')
+            return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
+
+        elif category_filter == 'GOLF':
+            summary = queryset.annotate(
+                count=Count('id'),
+                quantity=Coalesce(Sum(Cast(F('details__players'), IntegerField())), 0)
+            ).order_by('-count')
+            return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
         
-        return Response([{'product': item['tour_name'], 'sales': item['sales'], 'count': item['count']} for item in summary])
+        elif category_filter in ['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER']:
+            summary = queryset.annotate(
+                count=Count('id'),
+                quantity=Coalesce(Sum(
+                    Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
+                    Coalesce(Cast(F('details__children'), IntegerField()), 0) +
+                    Coalesce(Cast(F('details__infants'), IntegerField()), 0)
+                ), 0)
+            ).order_by('-count')
+            return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
+        
+        else:
+            return Response({"error": "Invalid category for product summary"}, status=status.HTTP_400_BAD_REQUEST)
 
     elif group_by == 'manager':
         summary = queryset.values('manager__username').annotate(
@@ -275,14 +306,19 @@ def reservation_summary(request):
         ])
     
     elif group_by == 'month':
+        queryset = queryset.annotate(
+            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
+        )
         summary = queryset.annotate(month=TruncMonth('start_date')).values('month').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
-            count=Count('id')
+            count=Count('id'),
+            total_customers=Coalesce(Sum('customers'), 0)
         ).order_by('month')
         return Response(summary)
-    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
         
     return Response({})
 
