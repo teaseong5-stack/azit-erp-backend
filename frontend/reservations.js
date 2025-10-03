@@ -13,8 +13,6 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     const reservationListTable = document.getElementById('reservation-list-table');
-
-    // 모달 요소
     const newReservationModalEl = new bootstrap.Modal(document.getElementById('newReservationModal'));
     const newReservationFormContainer = document.getElementById('new-reservation-form-container');
     const showNewReservationModalButton = document.getElementById('show-new-reservation-modal');
@@ -22,31 +20,24 @@ document.addEventListener("DOMContentLoaded", async function() {
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     const modalSaveButton = document.getElementById('modal-save-button');
-
-    // 현황판 필터 요소
     const summaryFilterYear = document.getElementById('summary-filter-year');
     const summaryFilterMonth = document.getElementById('summary-filter-month');
     const summaryFilterStartDate = document.getElementById('summary-filter-start-date');
     const summaryFilterEndDate = document.getElementById('summary-filter-end-date');
     const summaryFilterButton = document.getElementById('summary-filter-button');
     const summaryFilterReset = document.getElementById('summary-filter-reset');
-
-    // 목록 필터 요소
     const filterCategory = document.getElementById('filter-category');
     const filterSearch = document.getElementById('filter-search');
     const filterDateType = document.getElementById('filter-date-type');
     const filterStartDate = document.getElementById('filter-start-date');
     const filterEndDate = document.getElementById('filter-end-date');
     const filterButton = document.getElementById('filter-button');
-
     const exportCsvButton = document.getElementById('export-csv-button');
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageInfo = document.getElementById('page-info');
     const paginationContainer = document.getElementById('pagination-container');
 
-
-    // 상태 관리 변수
     let currentPage = 1;
     let totalPages = 1;
     let currentFilters = {};
@@ -68,7 +59,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             const year = currentYear - i;
             summaryFilterYear.innerHTML += `<option value="${year}">${year}년</option>`;
         }
-        summaryFilterMonth.innerHTML = '<option value="">-- 전체 월 --</option>';
         for (let i = 1; i <= 12; i++) {
             summaryFilterMonth.innerHTML += `<option value="${i}">${i}월</option>`;
         }
@@ -100,15 +90,12 @@ document.addEventListener("DOMContentLoaded", async function() {
             const categorySummaryCards = document.getElementById('category-summary-cards');
             categorySummaryCards.innerHTML = '';
 
-            let totalSales = 0;
-            let totalCost = 0;
-
+            let totalSales = 0, totalCost = 0;
             if (!summaryData || summaryData.length === 0) {
                 categorySummaryCards.innerHTML = '<div class="col"><p class="text-muted text-center">요약 정보가 없습니다.</p></div>';
                 return;
             }
             const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
-            
             const salesMap = new Map();
             summaryData.forEach(item => {
                 salesMap.set(item.category, { sales: item.sales, cost: item.cost });
@@ -120,12 +107,9 @@ document.addEventListener("DOMContentLoaded", async function() {
                 const data = salesMap.get(key) || { sales: 0 };
                 categorySummaryCards.innerHTML += `<div class="col"><div class="card"><div class="card-body"><h5 class="card-title">${label}</h5><p class="card-text">${Number(data.sales).toLocaleString()} VND</p></div></div></div>`;
             });
-
             const totalMargin = totalSales - totalCost;
-
             categorySummaryCards.innerHTML += `<div class="col"><div class="card bg-dark text-white"><div class="card-body"><h5 class="card-title">총 합계</h5><p class="card-text">${totalSales.toLocaleString()} VND</p></div></div></div>`;
             categorySummaryCards.innerHTML += `<div class="col"><div class="card ${totalMargin >= 0 ? 'bg-primary' : 'bg-danger'} text-white"><div class="card-body"><h5 class="card-title">총 마진</h5><p class="card-text">${totalMargin.toLocaleString()} VND</p></div></div></div>`;
-
         } catch (error) {
             console.error("카테고리 요약 업데이트 실패:", error);
             toast.error("요약 정보를 불러오는데 실패했습니다.");
@@ -133,11 +117,234 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     function getCategoryFields(prefix, category, details = {}) {
-        // ... (This function remains unchanged from the 4-column layout version)
+        const commonFields = `
+            <div class="form-group">
+                <label for="${prefix}-adults" class="form-label">성인</label>
+                <input type="number" class="form-control" id="${prefix}-adults" value="${details.adults || 0}">
+            </div>
+            <div class="form-group">
+                <label for="${prefix}-children" class="form-label">아동</label>
+                <input type="number" class="form-control" id="${prefix}-children" value="${details.children || 0}">
+            </div>
+            <div class="form-group">
+                <label for="${prefix}-infants" class="form-label">유아</label>
+                <input type="number" class="form-control" id="${prefix}-infants" value="${details.infants || 0}">
+            </div>
+        `;
+        switch (category) {
+            case 'TOUR':
+                return `
+                    <div class="form-grid form-grid--2-col">
+                        <div class="form-group">
+                            <label for="${prefix}-pickupLocation" class="form-label">픽업 장소</label>
+                            <input type="text" class="form-control" id="${prefix}-pickupLocation" value="${details.pickupLocation || ''}">
+                        </div>
+                         <div class="form-group">
+                            <label for="${prefix}-startTime" class="form-label">시작 시간</label>
+                            <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid--3-col mt-3">
+                        ${commonFields}
+                    </div>
+                `;
+            case 'RENTAL_CAR':
+                return `
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
+                            <label for="${prefix}-carType" class="form-label">차량 종류</label>
+                            <select id="${prefix}-carType" class="form-select">
+                                <option value="4인승" ${details.carType === '4인승' ? 'selected' : ''}>4인승</option>
+                                <option value="7인승" ${details.carType === '7인승' ? 'selected' : ''}>7인승</option>
+                                <option value="9인승 리무진" ${details.carType === '9인승 리무진' ? 'selected' : ''}>9인승 리무진</option>
+                                <option value="16인승" ${details.carType === '16인승' ? 'selected' : ''}>16인승</option>
+                                <option value="29인승" ${details.carType === '29인승' ? 'selected' : ''}>29인승</option>
+                                <option value="45인승" ${details.carType === '45인승' ? 'selected' : ''}>45인승</option>
+                                <option value="렌터카+가이드" ${details.carType === '렌터카+가이드' ? 'selected' : ''}>렌터카+가이드</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-usageHours" class="form-label">이용 시간</label>
+                            <select id="${prefix}-usageHours" class="form-select">
+                                <option value="6시간" ${details.usageHours === '6시간' ? 'selected' : ''}>6시간</option>
+                                <option value="12시간" ${details.usageHours === '12시간' ? 'selected' : ''}>12시간</option>
+                                <option value="픽업" ${details.usageHours === '픽업' ? 'selected' : ''}>픽업</option>
+                                <option value="샌딩" ${details.usageHours === '샌딩' ? 'selected' : ''}>샌딩</option>
+                                <option value="공항픽업" ${details.usageHours === '공항픽업' ? 'selected' : ''}>공항픽업</option>
+                                <option value="공항샌딩" ${details.usageHours === '공항샌딩' ? 'selected' : ''}>공항샌딩</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-startTime" class="form-label">시작 시간</label>
+                            <input type="time" class="form-control" id="${prefix}-startTime" value="${details.startTime || ''}">
+                        </div>
+                        ${commonFields}
+                    </div>
+                `;
+            case 'ACCOMMODATION':
+                return `<div class="form-grid form-grid--4-col">
+                    <div class="form-group">
+                        <label for="${prefix}-roomType" class="form-label">방 종류</label>
+                        <input type="text" class="form-control" id="${prefix}-roomType" value="${details.roomType || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="${prefix}-nights" class="form-label">숙박일수</label>
+                        <input type="number" class="form-control" id="${prefix}-nights" value="${details.nights || 1}">
+                    </div>
+                    <div class="form-group">
+                        <label for="${prefix}-roomCount" class="form-label">룸 수량</label>
+                        <input type="number" class="form-control" id="${prefix}-roomCount" value="${details.roomCount || 1}">
+                    </div>
+                    <div class="form-group">
+                        <label for="${prefix}-guests" class="form-label">인원수</label>
+                        <input type="number" class="form-control" id="${prefix}-guests" value="${details.guests || 0}">
+                    </div>
+                </div>`;
+            case 'GOLF':
+                return `<div class="form-grid form-grid--2-col">
+                    <div class="form-group">
+                        <label for="${prefix}-teeOffTime" class="form-label">티오프</label>
+                        <input type="time" class="form-control" id="${prefix}-teeOffTime" value="${details.teeOffTime || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="${prefix}-players" class="form-label">인원수</label>
+                        <input type="number" class="form-control" id="${prefix}-players" value="${details.players || 0}">
+                    </div>
+                </div>`;
+            case 'TICKET':
+            case 'OTHER':
+                return `<div class="form-grid form-grid--4-col">
+                    <div class="form-group">
+                        <label for="${prefix}-usageTime" class="form-label">이용 시간</label>
+                        <input type="time" class="form-control" id="${prefix}-usageTime" value="${details.usageTime || ''}">
+                    </div>
+                    ${commonFields}
+                </div>`;
+            default:
+                return '<p class="text-muted">이 카테고리에는 추가 상세 정보가 없습니다.</p>';
+        }
     }
 
     function renderFormFields(prefix, data = {}) {
-        // ... (This function remains unchanged from the 4-column layout version)
+        const details = data.details || {};
+        const category = data.category || 'TOUR';
+        const labels = {
+            ACCOMMODATION: { tourName: '숙소명', startDate: '체크인', endDate: '체크아웃' },
+            GOLF: { tourName: '골프장명', startDate: '라운딩일자', endDate: '종료일' },
+            DEFAULT: { tourName: '상품명', startDate: '출발일', endDate: '종료일' }
+        };
+        const currentLabels = labels[category] || labels.DEFAULT;
+
+        let managerOptions = allUsers.map(u => `<option value="${u.id}" ${data.manager && data.manager.id === u.id ? 'selected' : ''}>${u.username}</option>`).join('');
+        let managerFieldHtml = user.is_superuser ? `
+            <select class="form-select" id="${prefix}-manager">${managerOptions}</select>` : 
+            `<input type="text" class="form-control" value="${data.manager ? data.manager.username : user.username}" disabled>`;
+        
+        return `
+            <form id="${prefix}-form" class="reservation-form-layout">
+                <!-- 기본 정보 섹션 -->
+                <div class="form-section">
+                    <h5 class="form-section-title">기본 정보</h5>
+                    <div class="form-grid form-grid--3-col">
+                        <div class="form-group">
+                            <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
+                            <div class="searchable-dropdown">
+                                <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
+                                <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
+                                <div class="dropdown-content" id="${prefix}-customer-results"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-category" class="form-label fw-bold">카테고리</label>
+                            <select class="form-select" id="${prefix}-category">
+                                <option value="TOUR" ${category === 'TOUR' ? 'selected' : ''}>투어</option>
+                                <option value="RENTAL_CAR" ${category === 'RENTAL_CAR' ? 'selected' : ''}>렌터카</option>
+                                <option value="ACCOMMODATION" ${category === 'ACCOMMODATION' ? 'selected' : ''}>숙박</option>
+                                <option value="GOLF" ${category === 'GOLF' ? 'selected' : ''}>골프</option>
+                                <option value="TICKET" ${category === 'TICKET' ? 'selected' : ''}>티켓</option>
+                                <option value="OTHER" ${category === 'OTHER' ? 'selected' : ''}>기타</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
+                            <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid--4-col mt-3">
+                        <div class="form-group">
+                            <label for="${prefix}-reservation_date" class="form-label">예약일</label>
+                            <input type="date" class="form-control" id="${prefix}-reservation_date" value="${data.reservation_date || getLocalDateString()}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-start_date" class="form-label">${currentLabels.startDate}</label>
+                            <input type="date" class="form-control" id="${prefix}-start_date" value="${data.start_date || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-end_date" class="form-label">${currentLabels.endDate}</label>
+                            <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-manager" class="form-label fw-bold">담당자</label>
+                            ${managerFieldHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상세 정보 섹션 -->
+                <div class="form-section">
+                    <h5 class="form-section-title">상세 정보</h5>
+                    <div id="${prefix}-details-container">
+                        ${getCategoryFields(prefix, category, details)}
+                    </div>
+                </div>
+
+                <!-- 금액 및 상태 섹션 -->
+                <div class="form-section">
+                    <h5 class="form-section-title">금액 및 상태</h5>
+                    <div class="form-grid form-grid--4-col">
+                        <div class="form-group">
+                            <label for="${prefix}-total_price" class="form-label">판매가</label>
+                            <input type="number" class="form-control" id="${prefix}-total_price" value="${data.total_price || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-total_cost" class="form-label">원가</label>
+                            <input type="number" class="form-control" id="${prefix}-total_cost" value="${data.total_cost || 0}">
+                        </div>
+                         <div class="form-group">
+                            <label for="${prefix}-payment_amount" class="form-label">결제금액</label>
+                            <input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-status" class="form-label fw-bold">예약 상태</label>
+                            <select class="form-select" id="${prefix}-status">
+                                <option value="PENDING" ${data.status === 'PENDING' ? 'selected' : ''}>상담중</option>
+                                <option value="CONFIRMED" ${data.status === 'CONFIRMED' ? 'selected' : ''}>예약확정</option>
+                                <option value="PAID" ${data.status === 'PAID' ? 'selected' : ''}>잔금완료</option>
+                                <option value="COMPLETED" ${data.status === 'COMPLETED' ? 'selected' : ''}>여행완료</option>
+                                <option value="CANCELED" ${data.status === 'CANCELED' ? 'selected' : ''}>취소</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 기타 정보 섹션 -->
+                <div class="form-section">
+                    <h5 class="form-section-title">기타 정보</h5>
+                    <div class="form-grid form-grid--2-col">
+                        <div class="form-group">
+                            <label for="${prefix}-requests" class="form-label">요청사항 (외부/고객)</label>
+                            <textarea class="form-control" id="${prefix}-requests" rows="3">${data.requests || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="${prefix}-notes" class="form-label">메모 (내부 참고 사항)</label>
+                            <textarea class="form-control" id="${prefix}-notes" rows="3">${data.notes || ''}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                ${prefix === 'new-reservation' ? '<div class="mt-4"><button type="submit" class="btn btn-primary w-100">예약 등록</button></div>' : ''}
+            </form>
+        `;
     }
 
     // --- 3. 핵심 로직 함수 ---
@@ -227,7 +434,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // --- 4. 이벤트 처리 (생략된 부분 없이 전체 포함) ---
+    // --- 4. 이벤트 처리 및 함수 정의 (복원) ---
+
     function getFiltersFromInputs() {
         const filters = {
             category: filterCategory.value,
@@ -244,6 +452,220 @@ document.addEventListener("DOMContentLoaded", async function() {
         return filters;
     }
 
+    function getDetailsFromForm(prefix, category) {
+        const details = {};
+        const form = document.getElementById(`${prefix}-form`);
+        if (!form) return details;
+        const getFieldValue = (id) => form.querySelector(`#${prefix}-${id}`)?.value;
+        
+        switch (category) {
+            case 'TOUR':
+            case 'RENTAL_CAR':
+            case 'TICKET':
+            case 'OTHER':
+                details.startTime = getFieldValue('startTime');
+                details.pickupLocation = getFieldValue('pickupLocation');
+                details.dropoffLocation = getFieldValue('dropoffLocation');
+                details.adults = getFieldValue('adults');
+                details.children = getFieldValue('children');
+                details.infants = getFieldValue('infants');
+                if (category === 'RENTAL_CAR') {
+                    details.carType = getFieldValue('carType');
+                    details.usageHours = getFieldValue('usageHours');
+                }
+                if (category === 'TICKET' || category === 'OTHER') {
+                    details.usageTime = getFieldValue('usageTime');
+                }
+                break;
+            case 'ACCOMMODATION':
+                details.roomType = getFieldValue('roomType');
+                details.nights = getFieldValue('nights');
+                details.roomCount = getFieldValue('roomCount');
+                details.guests = getFieldValue('guests');
+                break;
+            case 'GOLF':
+                details.teeOffTime = getFieldValue('teeOffTime');
+                details.players = getFieldValue('players');
+                break;
+        }
+        return details;
+    }
+
+    function handleCategoryChange(prefix) {
+        const categorySelect = document.getElementById(`${prefix}-category`);
+        const detailsContainer = document.getElementById(`${prefix}-details-container`);
+        const tourNameLabel = document.querySelector(`label[for='${prefix}-tour_name']`);
+        const startDateLabel = document.querySelector(`label[for='${prefix}-start_date']`);
+        const endDateLabel = document.querySelector(`label[for='${prefix}-end_date']`);
+        
+        if (!categorySelect || !detailsContainer) return;
+        
+        const category = categorySelect.value;
+        detailsContainer.innerHTML = getCategoryFields(prefix, category, {});
+        
+        const labels = {
+            ACCOMMODATION: { tourName: '숙소명', startDate: '체크인', endDate: '체크아웃' },
+            GOLF: { tourName: '골프장명', startDate: '라운딩일자', endDate: '종료일' },
+            DEFAULT: { tourName: '상품명', startDate: '출발일', endDate: '종료일' }
+        };
+        const currentLabels = labels[category] || labels.DEFAULT;
+        if (tourNameLabel) tourNameLabel.textContent = currentLabels.tourName;
+        if (startDateLabel) startDateLabel.textContent = currentLabels.startDate;
+        if (endDateLabel) endDateLabel.textContent = currentLabels.endDate;
+    }
+
+    function setupFormEventListeners(prefix) {
+        const categorySelect = document.getElementById(`${prefix}-category`);
+        if (categorySelect) {
+            categorySelect.addEventListener('change', () => handleCategoryChange(prefix));
+        }
+
+        initializeSearchableCustomerDropdown(prefix);
+
+        if (prefix === 'new-reservation') {
+            const form = document.getElementById(`${prefix}-form`);
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const category = form.querySelector(`#${prefix}-category`).value;
+                const customerId = form.querySelector(`#${prefix}-customer_id`).value;
+                if (!customerId) {
+                    toast.error("고객을 선택해주세요.");
+                    return;
+                }
+                const formData = {
+                    customer_id: customerId,
+                    tour_name: form.querySelector(`#${prefix}-tour_name`).value,
+                    reservation_date: form.querySelector(`#${prefix}-reservation_date`).value,
+                    start_date: form.querySelector(`#${prefix}-start_date`).value || null,
+                    end_date: form.querySelector(`#${prefix}-end_date`).value || null,
+                    total_price: form.querySelector(`#${prefix}-total_price`).value,
+                    total_cost: form.querySelector(`#${prefix}-total_cost`).value,
+                    payment_amount: form.querySelector(`#${prefix}-payment_amount`).value,
+                    status: form.querySelector(`#${prefix}-status`).value,
+                    category: category,
+                    requests: form.querySelector(`#${prefix}-requests`).value,
+                    notes: form.querySelector(`#${prefix}-notes`).value,
+                    details: getDetailsFromForm(prefix, category),
+                };
+
+                const managerSelect = form.querySelector(`#${prefix}-manager`);
+                if (managerSelect) {
+                    formData.manager_id = managerSelect.value;
+                }
+                
+                try {
+                    await window.apiFetch('reservations', { method: 'POST', body: JSON.stringify(formData) });
+                    newReservationModalEl.hide();
+                    toast.show("새로운 예약이 등록되었습니다.");
+                    populateReservations(1, {});
+                    updateCategorySummary(currentSummaryFilters);
+                } catch (error) {
+                    toast.error(`등록 실패: ${error.message}`);
+                }
+            });
+        }
+    }
+
+    async function openReservationModal(reservationId) {
+        try {
+            const reservationData = await window.apiFetch(`reservations/${reservationId}`);
+            modalTitle.textContent = `예약 정보 수정 (ID: ${reservationId})`;
+            modalBody.innerHTML = renderFormFields('edit-reservation', reservationData);
+            reservationModalEl.show();
+            setupFormEventListeners('edit-reservation');
+
+            modalSaveButton.onclick = async () => {
+                const form = document.getElementById('edit-reservation-form');
+                const category = form.querySelector('#edit-reservation-category').value;
+                const customerId = form.querySelector('#edit-reservation-customer_id').value;
+
+                if (!customerId || isNaN(parseInt(customerId))) {
+                    toast.error("유효한 고객을 선택해주세요.");
+                    return;
+                }
+
+                const updatedData = {
+                    customer_id: customerId,
+                    tour_name: form.querySelector('#edit-reservation-tour_name').value,
+                    reservation_date: form.querySelector('#edit-reservation-reservation_date').value,
+                    start_date: form.querySelector('#edit-reservation-start_date').value || null,
+                    end_date: form.querySelector('#edit-reservation-end_date').value || null,
+                    total_price: form.querySelector('#edit-reservation-total_price').value,
+                    total_cost: form.querySelector('#edit-reservation-total_cost').value,
+                    payment_amount: form.querySelector('#edit-reservation-payment_amount').value,
+                    status: form.querySelector('#edit-reservation-status').value,
+                    category: category,
+                    requests: form.querySelector('#edit-reservation-requests').value,
+                    notes: form.querySelector('#edit-reservation-notes').value,
+                    details: getDetailsFromForm('edit-reservation', category),
+                };
+
+                const managerSelect = form.querySelector('#edit-reservation-manager');
+                if (managerSelect) {
+                    updatedData.manager_id = managerSelect.value;
+                }
+                
+                try {
+                    await window.apiFetch(`reservations/${reservationId}`, { method: 'PUT', body: JSON.stringify(updatedData) });
+                    reservationModalEl.hide();
+                    toast.show("예약 정보가 수정되었습니다.");
+                    populateReservations(currentPage, currentFilters);
+                    updateCategorySummary(currentSummaryFilters);
+                } catch (error) {
+                    toast.error(`수정 실패: ${error.message}`);
+                }
+            };
+        } catch (error) {
+            toast.error("예약 정보를 불러오는 데 실패했습니다.");
+        }
+    }
+    
+    function initializeSearchableCustomerDropdown(prefix) {
+        const searchInput = document.getElementById(`${prefix}-customer-search`);
+        const resultsContainer = document.getElementById(`${prefix}-customer-results`);
+        const hiddenIdInput = document.getElementById(`${prefix}-customer_id`);
+        if (!searchInput || !resultsContainer || !hiddenIdInput) return;
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            resultsContainer.innerHTML = '';
+            hiddenIdInput.value = ''; 
+            if (query.length < 1) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            const filteredCustomers = allCustomers.filter(c =>
+                c.name.toLowerCase().includes(query) || (c.phone_number && c.phone_number.includes(query))
+            );
+
+            if (filteredCustomers.length > 0) {
+                resultsContainer.style.display = 'block';
+                filteredCustomers.slice(0, 10).forEach(c => {
+                    const item = document.createElement('a');
+                    item.className = 'dropdown-item';
+                    item.href = '#';
+                    item.textContent = `${c.name} (${c.phone_number || '번호없음'})`;
+                    item.onclick = (e) => {
+                        e.preventDefault();
+                        searchInput.value = item.textContent;
+                        hiddenIdInput.value = c.id;
+                        resultsContainer.style.display = 'none';
+                    };
+                    resultsContainer.appendChild(item);
+                });
+            } else {
+                resultsContainer.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== searchInput) {
+                resultsContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // --- 5. 이벤트 리스너 설정 ---
     summaryFilterButton.addEventListener('click', () => updateCategorySummary(getSummaryFiltersFromInputs()));
     summaryFilterReset.addEventListener('click', () => {
         initializeSummaryFilters();
@@ -298,8 +720,8 @@ document.addEventListener("DOMContentLoaded", async function() {
     });
     prevPageButton.addEventListener('click', () => { if (currentPage > 1) populateReservations(currentPage - 1, currentFilters);});
     nextPageButton.addEventListener('click', () => { if (currentPage < totalPages) populateReservations(currentPage + 1, currentFilters);});
-    
-    // --- 5. 페이지 초기화 실행 ---
+
+    // --- 6. 페이지 초기화 실행 ---
     async function initializePage() {
         initializeSummaryFilters();
         await fetchAllInitialData();
