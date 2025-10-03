@@ -246,7 +246,6 @@ def reservation_summary(request):
         
     group_by = request.query_params.get('group_by')
 
-    # JSONField 내의 값을 정수로 변환하여 합산하기 위한 공통 표현식
     adults = Coalesce(Cast(F('details__adults'), IntegerField()), 0)
     children = Coalesce(Cast(F('details__children'), IntegerField()), 0)
     infants = Coalesce(Cast(F('details__infants'), IntegerField()), 0)
@@ -286,8 +285,8 @@ def reservation_summary(request):
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
             count=Count('id'),
-            # 합산 표현식을 Sum 함수 안에 직접 넣어줍니다.
-            total_customers=Coalesce(Sum(total_customers_expression), 0)
+            # [임시 비활성화] 오류 원인 진단을 위해 고객 수 계산 로직을 주석 처리하고 기본값 0을 반환합니다.
+            total_customers=Value(0, output_field=IntegerField())
         ).order_by('month')
         return Response(summary)
     # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
