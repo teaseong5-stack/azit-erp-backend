@@ -25,20 +25,18 @@ document.addEventListener("DOMContentLoaded", function() {
             monthlySalesTable.innerHTML = '';
             
             if (!summaryData || summaryData.length === 0) {
-                monthlySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5">해당 년도의 데이터가 없습니다.</td></tr>';
+                monthlySalesTable.innerHTML = '<tr><td colspan="6" class="text-center py-5">해당 년도의 데이터가 없습니다.</td></tr>';
                 totalRow.innerHTML = '';
                 return;
             }
 
-            // 1월부터 12월까지의 데이터를 담을 배열 준비
             const monthlyData = Array.from({ length: 12 }, () => null);
             summaryData.forEach(item => {
-                const monthIndex = new Date(item.month).getMonth(); // 0-11
+                const monthIndex = new Date(item.month).getMonth();
                 monthlyData[monthIndex] = item;
             });
 
-            // 총합계 계산용 변수
-            let totalCost = 0, totalSales = 0, totalPaid = 0, totalCount = 0, totalCustomers = 0;
+            let totalCost = 0, totalSales = 0, totalPaid = 0, totalCount = 0;
 
             monthlyData.forEach((item, index) => {
                 const month = index + 1;
@@ -46,14 +44,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 const sales = Number(item?.sales || 0);
                 const paid = Number(item?.paid_amount || 0);
                 const count = Number(item?.count || 0);
-                const customers = Number(item?.total_customers || 0);
                 const margin = sales - cost;
 
                 totalCost += cost;
                 totalSales += sales;
                 totalPaid += paid;
                 totalCount += count;
-                totalCustomers += customers;
 
                 const row = monthlySalesTable.insertRow();
                 row.innerHTML = `
@@ -63,11 +59,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     <td class="fw-bold ${margin >= 0 ? 'text-primary' : 'text-danger'}">${margin.toLocaleString()} VND</td>
                     <td>${paid.toLocaleString()} VND</td>
                     <td>${count}</td>
-                    <td>${customers.toLocaleString()}</td>
                 `;
             });
 
-            // 총합계 행 렌더링
             const totalMargin = totalSales - totalCost;
             totalRow.innerHTML = `
                 <td>총 합계</td>
@@ -76,13 +70,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="fw-bold ${totalMargin >= 0 ? 'text-primary' : 'text-danger'}">${totalMargin.toLocaleString()} VND</td>
                 <td>${totalPaid.toLocaleString()} VND</td>
                 <td>${totalCount}</td>
-                <td>${totalCustomers.toLocaleString()}</td>
             `;
 
         } catch (error) {
             console.error("데이터 업데이트 실패:", error);
             toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
-            monthlySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
+            monthlySalesTable.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
             totalRow.innerHTML = '';
         }
     }

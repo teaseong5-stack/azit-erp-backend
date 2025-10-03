@@ -245,30 +245,14 @@ def reservation_summary(request):
         queryset = queryset.filter(category=category)
         
     group_by = request.query_params.get('group_by')
-
-    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
-    # 카테고리별로 다른 필드를 참조하여 고객 수를 계산하는 조건부 표현식
-    customer_count_expression = Case(
-        When(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'], 
-             then=Coalesce(Cast(F('details__adults'), IntegerField()), 0)),
-        When(category='ACCOMMODATION', 
-             then=Coalesce(Cast(F('details__guests'), IntegerField()), 0)),
-        When(category='GOLF', 
-             then=Coalesce(Cast(F('details__players'), IntegerField()), 0)),
-        default=Value(0),
-        output_field=IntegerField()
-    )
-
-    # 먼저 각 예약에 대한 고객 수를 계산하는 필드를 임시로 추가합니다.
-    queryset = queryset.annotate(customers=customer_count_expression)
-    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
     
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
+    # '총 이용 고객 수' 관련 로직을 모두 제거하고, 예약 건수(count)만 계산합니다.
     if group_by == 'category':
         summary = queryset.values('category').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
-            count=Count('id'),
-            total_customers=Coalesce(Sum('customers'), 0)
+            count=Count('id')
         ).order_by('category')
         return Response(summary)
     
@@ -295,10 +279,10 @@ def reservation_summary(request):
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
-            count=Count('id'),
-            total_customers=Coalesce(Sum('customers'), 0)
+            count=Count('id')
         ).order_by('month')
         return Response(summary)
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
         
     return Response({})
 
