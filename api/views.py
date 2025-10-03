@@ -1,7 +1,7 @@
 import csv
 from django.http import HttpResponse
-from django.db.models import Q, F, Sum, Value, DecimalField, Count
-from django.db.models.functions import Coalesce, ExtractYear, ExtractMonth
+from django.db.models import Q, F, Sum, Value, DecimalField, Count, IntegerField
+from django.db.models.functions import Coalesce, Cast
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models.functions import TruncMonth
-
 
 from .models import Customer, Reservation, Partner, Transaction
 from .serializers import (
@@ -21,10 +20,6 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
-    """
-    리포트 페이지의 요약 카드 데이터를 생성하는 API.
-    전달된 모든 필터(년, 월 포함)를 적용하여 총합계를 계산합니다.
-    """
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
     manager_id = request.query_params.get('manager', None)
@@ -86,8 +81,6 @@ def user_list(request):
 def export_reservations_csv(request):
     queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
     
-    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
-    # reservation_list와 동일한 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
@@ -112,7 +105,6 @@ def export_reservations_csv(request):
         queryset = queryset.filter(reservation_date__gte=reservation_date_gte)
     if reservation_date_lte:
         queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
-    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
@@ -253,11 +245,18 @@ def reservation_summary(request):
         queryset = queryset.filter(category=category)
         
     group_by = request.query_params.get('group_by')
+
+    # JSONField 내의 값을 정수로 변환하여 합산하기 위한 준비
+    adults = Coalesce(Cast(F('details__adults'), IntegerField()), 0)
+    children = Coalesce(Cast(F('details__children'), IntegerField()), 0)
+    infants = Coalesce(Cast(F('details__infants'), IntegerField()), 0)
     
     if group_by == 'category':
         summary = queryset.values('category').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
-            cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField()))
+            cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
+            count=Count('id'),
+            total_customers=Sum(adults + children + infants)
         ).order_by('category')
         return Response(summary)
     
@@ -278,6 +277,16 @@ def reservation_summary(request):
             {'manager': item['manager__username'] or '미지정', 'sales': item['sales'], 'count': item['count']} 
             for item in summary
         ])
+    
+    elif group_by == 'month':
+        summary = queryset.annotate(month=TruncMonth('start_date')).values('month').annotate(
+            sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
+            cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
+            paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
+            count=Count('id'),
+            total_customers=Sum(adults + children + infants)
+        ).order_by('month')
+        return Response(summary)
         
     return Response({})
 

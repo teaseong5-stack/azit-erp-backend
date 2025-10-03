@@ -1,91 +1,99 @@
 document.addEventListener("DOMContentLoaded", function() {
-    if (!document.getElementById('monthlySalesChart')) return;
+    if (!document.getElementById('monthly-sales-table')) return;
 
-    const monthlySalesChartCanvas = document.getElementById('monthlySalesChart');
     const monthlySalesTable = document.getElementById('monthly-sales-table');
+    const totalRow = document.getElementById('monthly-sales-total');
     const yearSelect = document.getElementById('filter-year');
     const filterButton = document.getElementById('filter-button');
-    
-    let monthlySalesChart = null;
-    let allReservations = [];
+    const reportTitle = document.getElementById('monthly-report-title');
 
-    /**
-     * 년도 필터 옵션을 채우는 함수
-     */
     function populateFilters() {
         const currentYear = new Date().getFullYear();
         for (let i = 0; i < 5; i++) {
             const year = currentYear - i;
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = `${year}년`;
-            if (i === 0) option.selected = true; // 기본으로 현재 년도 선택
-            yearSelect.appendChild(option);
+            yearSelect.innerHTML += `<option value="${year}" ${i === 0 ? 'selected' : ''}>${year}년</option>`;
         }
     }
 
-    /**
-     * 필터링된 예약 데이터로 차트와 테이블을 업데이트하는 함수
-     */
-    function updateDashboard(reservations) {
-        const monthlySales = {};
-        const activeReservations = reservations.filter(res => res.status !== 'CANCELED' && res.start_date);
-        
-        activeReservations.forEach(res => {
-            const month = res.start_date.substring(0, 7); // YYYY-MM
-            monthlySales[month] = (monthlySales[month] || 0) + Number(res.total_price);
-        });
-        
-        const sortedMonths = Object.keys(monthlySales).sort();
-        
-        // 차트 렌더링
-        if (monthlySalesChart) monthlySalesChart.destroy();
-        monthlySalesChart = new Chart(monthlySalesChartCanvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: sortedMonths,
-                datasets: [{
-                    label: '월별 매출액 (VND)',
-                    data: sortedMonths.map(month => monthlySales[month]),
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-        });
+    async function updateDashboard(year) {
+        reportTitle.textContent = `${year}년 월별 실적 요약`;
+        const params = new URLSearchParams({ group_by: 'month', year: year });
 
-        // 테이블 렌더링
-        monthlySalesTable.innerHTML = '';
-        sortedMonths.forEach(month => {
-            const row = monthlySalesTable.insertRow();
-            row.innerHTML = `
-                <td>${month}</td>
-                <td>${monthlySales[month].toLocaleString()} VND</td>
+        try {
+            const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
+            
+            monthlySalesTable.innerHTML = '';
+            
+            if (!summaryData || summaryData.length === 0) {
+                monthlySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5">해당 년도의 데이터가 없습니다.</td></tr>';
+                totalRow.innerHTML = '';
+                return;
+            }
+
+            // 1월부터 12월까지의 데이터를 담을 배열 준비
+            const monthlyData = Array.from({ length: 12 }, () => null);
+            summaryData.forEach(item => {
+                const monthIndex = new Date(item.month).getMonth(); // 0-11
+                monthlyData[monthIndex] = item;
+            });
+
+            // 총합계 계산용 변수
+            let totalCost = 0, totalSales = 0, totalPaid = 0, totalCount = 0, totalCustomers = 0;
+
+            monthlyData.forEach((item, index) => {
+                const month = index + 1;
+                const cost = Number(item?.cost || 0);
+                const sales = Number(item?.sales || 0);
+                const paid = Number(item?.paid_amount || 0);
+                const count = Number(item?.count || 0);
+                const customers = Number(item?.total_customers || 0);
+                const margin = sales - cost;
+
+                totalCost += cost;
+                totalSales += sales;
+                totalPaid += paid;
+                totalCount += count;
+                totalCustomers += customers;
+
+                const row = monthlySalesTable.insertRow();
+                row.innerHTML = `
+                    <td>${month}월</td>
+                    <td>${cost.toLocaleString()} VND</td>
+                    <td>${sales.toLocaleString()} VND</td>
+                    <td class="fw-bold ${margin >= 0 ? 'text-primary' : 'text-danger'}">${margin.toLocaleString()} VND</td>
+                    <td>${paid.toLocaleString()} VND</td>
+                    <td>${count}</td>
+                    <td>${customers.toLocaleString()}</td>
+                `;
+            });
+
+            // 총합계 행 렌더링
+            const totalMargin = totalSales - totalCost;
+            totalRow.innerHTML = `
+                <td>총 합계</td>
+                <td>${totalCost.toLocaleString()} VND</td>
+                <td>${totalSales.toLocaleString()} VND</td>
+                <td class="fw-bold ${totalMargin >= 0 ? 'text-primary' : 'text-danger'}">${totalMargin.toLocaleString()} VND</td>
+                <td>${totalPaid.toLocaleString()} VND</td>
+                <td>${totalCount}</td>
+                <td>${totalCustomers.toLocaleString()}</td>
             `;
-        });
-    }
 
-    // 이벤트 리스너 설정
-    filterButton.addEventListener('click', () => {
-        const year = yearSelect.value;
-        let filtered = allReservations;
-        if (year) {
-            filtered = filtered.filter(r => r.start_date && r.start_date.startsWith(year));
+        } catch (error) {
+            console.error("데이터 업데이트 실패:", error);
+            toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
+            monthlySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger">데이터 로딩 중 오류가 발생했습니다.</td></tr>';
+            totalRow.innerHTML = '';
         }
-        updateDashboard(filtered);
+    }
+    
+    filterButton.addEventListener('click', () => {
+        updateDashboard(yearSelect.value);
     });
 
-    // 페이지 초기화
     async function initializePage() {
         populateFilters();
-        const response = await window.apiFetch('reservations/all/');
-        if (response && response.results) {
-            allReservations = response.results;
-            // 초기에 현재 년도 데이터로 필터링
-            const currentYear = new Date().getFullYear().toString();
-            const initialData = allReservations.filter(r => r.start_date && r.start_date.startsWith(currentYear));
-            updateDashboard(initialData);
-        }
+        await updateDashboard(new Date().getFullYear());
     }
 
     initializePage();
