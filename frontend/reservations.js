@@ -241,13 +241,13 @@ document.addEventListener("DOMContentLoaded", async function() {
             `<input type="text" class="form-control" value="${data.manager ? data.manager.username : user.username}" disabled>`;
         
         return `
-            <form id="${prefix}-form" class="reservation-form-layout">
+            <form id="${prefix}-form" class="reservation-form-premium">
                 <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-grid form-grid--3-col">
                         <div class="form-group">
-                            <label for="${prefix}-customer-search" class="form-label fw-bold">고객명</label>
+                            <label for="${prefix}-customer-search" class="form-label">고객명</label>
                             <div class="searchable-dropdown">
                                 <input type="text" class="form-control" id="${prefix}-customer-search" placeholder="고객 검색..." autocomplete="off" value="${data.customer ? `${data.customer.name} (${data.customer.phone_number || '번호없음'})` : ''}" required>
                                 <input type="hidden" id="${prefix}-customer_id" value="${data.customer ? data.customer.id : ''}">
@@ -255,7 +255,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="${prefix}-category" class="form-label fw-bold">카테고리</label>
+                            <label for="${prefix}-category" class="form-label">카테고리</label>
                             <select class="form-select" id="${prefix}-category">
                                 <option value="TOUR" ${category === 'TOUR' ? 'selected' : ''}>투어</option>
                                 <option value="RENTAL_CAR" ${category === 'RENTAL_CAR' ? 'selected' : ''}>렌터카</option>
@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="${prefix}-tour_name" class="form-label fw-bold">${currentLabels.tourName}</label>
+                            <label for="${prefix}-tour_name" class="form-label">${currentLabels.tourName}</label>
                             <input type="text" class="form-control" id="${prefix}-tour_name" value="${data.tour_name || ''}" required>
                         </div>
                     </div>
@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                             <input type="date" class="form-control" id="${prefix}-end_date" value="${data.end_date || ''}">
                         </div>
                         <div class="form-group">
-                            <label for="${prefix}-manager" class="form-label fw-bold">담당자</label>
+                            <label for="${prefix}-manager" class="form-label">담당자</label>
                             ${managerFieldHtml}
                         </div>
                     </div>
@@ -315,7 +315,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                             <input type="number" class="form-control" id="${prefix}-payment_amount" value="${data.payment_amount || 0}">
                         </div>
                         <div class="form-group">
-                            <label for="${prefix}-status" class="form-label fw-bold">예약 상태</label>
+                            <label for="${prefix}-status" class="form-label">예약 상태</label>
                             <select class="form-select" id="${prefix}-status">
                                 <option value="PENDING" ${data.status === 'PENDING' ? 'selected' : ''}>상담중</option>
                                 <option value="CONFIRMED" ${data.status === 'CONFIRMED' ? 'selected' : ''}>예약확정</option>
@@ -342,7 +342,10 @@ document.addEventListener("DOMContentLoaded", async function() {
                     </div>
                 </div>
                 
-                ${prefix === 'new-reservation' ? '<div class="mt-4"><button type="submit" class="btn btn-primary w-100">예약 등록</button></div>' : ''}
+                ${prefix === 'new-reservation' ? `
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">예약 등록</button>
+                </div>` : ''}
             </form>
         `;
     }
