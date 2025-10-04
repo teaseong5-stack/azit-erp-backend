@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // --- 1. HTML 요소 선언 ---
     const categorySalesTable = document.getElementById('category-sales-table');
+    const totalRow = document.getElementById('category-sales-total'); // 합계 행
     const yearSelect = document.getElementById('filter-year');
     const monthSelect = document.getElementById('filter-month');
     const filterButton = document.getElementById('filter-button');
@@ -11,6 +12,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const detailModalBody = document.getElementById('detailModalBody');
 
     const categoryLabels = { 'TOUR': '투어', 'RENTAL_CAR': '렌터카', 'ACCOMMODATION': '숙박', 'GOLF': '골프', 'TICKET': '티켓', 'OTHER': '기타' };
+
+    // --- 2. 데이터 로딩 및 렌더링 함수 ---
 
     function populateFilters() {
         const currentYear = new Date().getFullYear();
@@ -33,14 +36,22 @@ document.addEventListener("DOMContentLoaded", function() {
         try {
             const summaryData = await window.apiFetch(`reservations/summary?${params.toString()}`);
             
+            categorySalesTable.innerHTML = '';
+            totalRow.innerHTML = '';
+
             if (!summaryData || summaryData.length === 0) {
                 categorySalesTable.innerHTML = '<tr><td colspan="7" class="text-center py-5">해당 기간의 데이터가 없습니다.</td></tr>';
                 return;
             }
 
-            const totalSales = summaryData.reduce((sum, item) => sum + Number(item.sales), 0);
+            let totalCount = 0, totalCost = 0, totalSales = 0;
 
-            categorySalesTable.innerHTML = '';
+            summaryData.forEach(item => {
+                totalCount += Number(item.count || 0);
+                totalCost += Number(item.cost);
+                totalSales += Number(item.sales);
+            });
+
             summaryData.forEach(item => {
                 const sales = Number(item.sales);
                 const cost = Number(item.cost);
@@ -61,6 +72,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     <td>${salesShare}%</td>
                 `;
             });
+
+            // 합계 행 렌더링
+            const totalMargin = totalSales - totalCost;
+            const totalMarginRate = totalSales > 0 ? (totalMargin / totalSales * 100).toFixed(1) : 0;
+            totalRow.innerHTML = `
+                <td>총 합계</td>
+                <td>${totalCount.toLocaleString()}</td>
+                <td>${totalCost.toLocaleString()} VND</td>
+                <td>${totalSales.toLocaleString()} VND</td>
+                <td class="fw-bold ${totalMargin >= 0 ? 'text-primary' : 'text-danger'}">${totalMargin.toLocaleString()} VND</td>
+                <td>${totalMarginRate}%</td>
+                <td>100.0%</td>
+            `;
+
         } catch (error) {
             console.error("데이터 업데이트 실패:", error);
             toast.error("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -144,7 +169,8 @@ document.addEventListener("DOMContentLoaded", function() {
             detailModalBody.innerHTML = '<p class="text-center text-danger">데이터를 불러오는 중 오류가 발생했습니다.</p>';
         }
     }
-
+    
+    // --- 3. 이벤트 리스너 설정 ---
     filterButton.addEventListener('click', () => {
         updateDashboard(yearSelect.value, monthSelect.value);
     });
@@ -157,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    // --- 4. 페이지 초기화 ---
     async function initializePage() {
         populateFilters();
         await updateDashboard();
