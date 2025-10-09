@@ -247,16 +247,10 @@ def reservation_summary(request):
     group_by = request.query_params.get('group_by')
     
     if group_by == 'category':
-        queryset = queryset.annotate(
-            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
-                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
-                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
-        )
         summary = queryset.values('category').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
-            count=Count('id'),
-            total_customers=Coalesce(Sum('customers'), 0)
+            count=Count('id')
         ).order_by('category')
         return Response(summary)
     
@@ -303,17 +297,11 @@ def reservation_summary(request):
         ])
     
     elif group_by == 'month':
-        queryset = queryset.annotate(
-            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
-                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
-                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
-        )
         summary = queryset.annotate(month=TruncMonth('start_date')).values('month').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
-            count=Count('id'),
-            total_customers=Coalesce(Sum('customers'), 0)
+            count=Count('id')
         ).order_by('month')
         return Response(summary)
         
@@ -353,19 +341,12 @@ def reservation_list(request):
         if reservation_date_lte:
             queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
 
+        # [수정] '총 이용 고객 수' 관련 집계 로직을 제거합니다.
         summary = queryset.aggregate(
             total_cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             total_price=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
-            total_payment=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
-            
-            total_adults=Coalesce(Sum(Cast(F('details__adults'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
-            total_children=Coalesce(Sum(Cast(F('details__children'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
-            total_infants=Coalesce(Sum(Cast(F('details__infants'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
-            
-            total_guests=Coalesce(Sum(Cast(F('details__guests'), IntegerField()), filter=Q(category='ACCOMMODATION')), 0),
-            total_players=Coalesce(Sum(Cast(F('details__players'), IntegerField()), filter=Q(category='GOLF')), 0)
+            total_payment=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField()))
         )
-        summary['total_adults'] += summary['total_guests'] + summary['total_players']
 
         paginator = PageNumberPagination()
         paginator.page_size = 50

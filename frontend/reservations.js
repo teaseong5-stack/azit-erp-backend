@@ -444,19 +444,13 @@ document.addEventListener("DOMContentLoaded", async function() {
         const total_cost = Number(summary.total_cost || 0);
         const total_price = Number(summary.total_price || 0);
         const total_payment = Number(summary.total_payment || 0);
-        const total_adults = Number(summary.total_adults || 0);
-        const total_children = Number(summary.total_children || 0);
-        const total_infants = Number(summary.total_infants || 0);
         const total_margin = total_price - total_cost;
 
         document.getElementById('summary-list-cost').textContent = `${total_cost.toLocaleString()} VND`;
         document.getElementById('summary-list-price').textContent = `${total_price.toLocaleString()} VND`;
         document.getElementById('summary-list-payment').textContent = `${total_payment.toLocaleString()} VND`;
         document.getElementById('summary-list-margin').textContent = `${total_margin.toLocaleString()} VND`;
-        document.getElementById('summary-list-adults').textContent = total_adults.toLocaleString();
-        document.getElementById('summary-list-children').textContent = total_children.toLocaleString();
-        document.getElementById('summary-list-infants').textContent = total_infants.toLocaleString();
-
+        
         const marginEl = document.getElementById('summary-list-margin');
         marginEl.classList.toggle('text-primary', total_margin >= 0);
         marginEl.classList.toggle('text-danger', total_margin < 0);
