@@ -247,10 +247,16 @@ def reservation_summary(request):
     group_by = request.query_params.get('group_by')
     
     if group_by == 'category':
+        queryset = queryset.annotate(
+            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
+        )
         summary = queryset.values('category').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
-            count=Count('id')
+            count=Count('id'),
+            total_customers=Coalesce(Sum('customers'), 0)
         ).order_by('category')
         return Response(summary)
     
@@ -259,24 +265,26 @@ def reservation_summary(request):
         if not category_filter:
             return Response({"error": "Category is required for product summary"}, status=status.HTTP_400_BAD_REQUEST)
 
-        queryset = queryset.filter(category=category_filter).values('tour_name')
+        queryset = queryset.filter(category=category_filter)
 
         if category_filter == 'ACCOMMODATION':
-            summary = queryset.annotate(
+            queryset = queryset.filter(details__roomCount__isnull=False).exclude(details__roomCount='')
+            summary = queryset.values('tour_name').annotate(
                 count=Count('id'),
                 quantity=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0)
             ).order_by('-count')
             return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
 
         elif category_filter == 'GOLF':
-            summary = queryset.annotate(
+            queryset = queryset.filter(details__players__isnull=False).exclude(details__players='')
+            summary = queryset.values('tour_name').annotate(
                 count=Count('id'),
                 quantity=Coalesce(Sum(Cast(F('details__players'), IntegerField())), 0)
             ).order_by('-count')
             return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
         
         elif category_filter in ['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER']:
-            summary = queryset.annotate(
+            summary = queryset.values('tour_name').annotate(
                 count=Count('id')
             ).order_by('-count')
             return Response([{'name': item['tour_name'], 'count': item['count']} for item in summary])
@@ -295,11 +303,17 @@ def reservation_summary(request):
         ])
     
     elif group_by == 'month':
+        queryset = queryset.annotate(
+            customers=Coalesce(Cast(F('details__adults'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__children'), IntegerField()), 0) +
+                      Coalesce(Cast(F('details__infants'), IntegerField()), 0)
+        )
         summary = queryset.annotate(month=TruncMonth('start_date')).values('month').annotate(
             sales=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
             cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             paid_amount=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
-            count=Count('id')
+            count=Count('id'),
+            total_customers=Coalesce(Sum('customers'), 0)
         ).order_by('month')
         return Response(summary)
         
@@ -339,11 +353,28 @@ def reservation_list(request):
         if reservation_date_lte:
             queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
 
+        summary = queryset.aggregate(
+            total_cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
+            total_price=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
+            total_payment=Coalesce(Sum('payment_amount'), Value(0, output_field=DecimalField())),
+            
+            total_adults=Coalesce(Sum(Cast(F('details__adults'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
+            total_children=Coalesce(Sum(Cast(F('details__children'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
+            total_infants=Coalesce(Sum(Cast(F('details__infants'), IntegerField()), filter=Q(category__in=['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER'])), 0),
+            
+            total_guests=Coalesce(Sum(Cast(F('details__guests'), IntegerField()), filter=Q(category='ACCOMMODATION')), 0),
+            total_players=Coalesce(Sum(Cast(F('details__players'), IntegerField()), filter=Q(category='GOLF')), 0)
+        )
+        summary['total_adults'] += summary['total_guests'] + summary['total_players']
+
         paginator = PageNumberPagination()
         paginator.page_size = 50
         paginated_queryset = paginator.paginate_queryset(queryset.order_by('-reservation_date'), request)
         serializer = ReservationSerializer(paginated_queryset, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        
+        response = paginator.get_paginated_response(serializer.data)
+        response.data['summary'] = summary
+        return response
 
     elif request.method == 'POST':
         serializer = ReservationSerializer(data=request.data)

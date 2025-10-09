@@ -242,7 +242,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         
         return `
             <form id="${prefix}-form" class="reservation-form-premium">
-                <!-- 기본 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기본 정보</h5>
                     <div class="form-grid form-grid--3-col">
@@ -289,16 +288,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                         </div>
                     </div>
                 </div>
-
-                <!-- 상세 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">상세 정보</h5>
                     <div id="${prefix}-details-container">
                         ${getCategoryFields(prefix, category, details)}
                     </div>
                 </div>
-
-                <!-- 금액 및 상태 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">금액 및 상태</h5>
                     <div class="form-grid form-grid--4-col">
@@ -326,8 +321,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                         </div>
                     </div>
                 </div>
-                
-                <!-- 기타 정보 섹션 -->
                 <div class="form-section">
                     <h5 class="form-section-title">기타 정보</h5>
                     <div class="form-grid form-grid--2-col">
@@ -341,7 +334,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                         </div>
                     </div>
                 </div>
-                
                 ${prefix === 'new-reservation' ? `
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">예약 등록</button>
@@ -371,6 +363,9 @@ document.addEventListener("DOMContentLoaded", async function() {
         const params = new URLSearchParams({ page, ...filters });
         try {
             const response = await window.apiFetch(`reservations?${params.toString()}`);
+            
+            renderListSummary(response.summary);
+            
             reservationListTable.innerHTML = '';
             
             if (!response || !response.results || response.results.length === 0) {
@@ -436,8 +431,38 @@ document.addEventListener("DOMContentLoaded", async function() {
             toast.error("예약 목록을 불러오는 데 실패했습니다.");
         }
     }
+    
+    function renderListSummary(summary) {
+        const container = document.getElementById('list-summary-container');
+        const filters = getFiltersFromInputs();
 
-    // --- 4. 이벤트 처리 및 함수 정의 (복원) ---
+        if (!summary || (!filters.start_date__gte && !filters.reservation_date__gte)) {
+            container.style.display = 'none';
+            return;
+        }
+
+        const total_cost = Number(summary.total_cost || 0);
+        const total_price = Number(summary.total_price || 0);
+        const total_payment = Number(summary.total_payment || 0);
+        const total_adults = Number(summary.total_adults || 0);
+        const total_children = Number(summary.total_children || 0);
+        const total_infants = Number(summary.total_infants || 0);
+        const total_margin = total_price - total_cost;
+
+        document.getElementById('summary-list-cost').textContent = `${total_cost.toLocaleString()} VND`;
+        document.getElementById('summary-list-price').textContent = `${total_price.toLocaleString()} VND`;
+        document.getElementById('summary-list-payment').textContent = `${total_payment.toLocaleString()} VND`;
+        document.getElementById('summary-list-margin').textContent = `${total_margin.toLocaleString()} VND`;
+        document.getElementById('summary-list-adults').textContent = total_adults.toLocaleString();
+        document.getElementById('summary-list-children').textContent = total_children.toLocaleString();
+        document.getElementById('summary-list-infants').textContent = total_infants.toLocaleString();
+
+        const marginEl = document.getElementById('summary-list-margin');
+        marginEl.classList.toggle('text-primary', total_margin >= 0);
+        marginEl.classList.toggle('text-danger', total_margin < 0);
+
+        container.style.display = 'flex';
+    }
 
     function getFiltersFromInputs() {
         const filters = {
