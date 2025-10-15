@@ -98,28 +98,38 @@ document.addEventListener("DOMContentLoaded", function() {
             let colspan = 2;
 
             if (category === 'ACCOMMODATION') {
-                headers = ['숙소명', '예약건수', '룸수량'];
+                headers = ['숙소명', '총 룸수량', '총 숙박일수'];
                 colspan = 3;
                 if (detailData && detailData.length > 0) {
                     detailData.forEach(item => {
-                        rowsHtml += `<tr><td>${item.name}</td><td>${item.count}</td><td>${item.quantity.toLocaleString()}</td></tr>`;
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.room_count_sum.toLocaleString()}</td>
+                            <td>${item.nights_sum.toLocaleString()}</td>
+                        </tr>`;
                     });
                 }
             } else if (category === 'GOLF') {
-                headers = ['골프장명', '예약건수', '라운딩 수량'];
-                colspan = 3;
+                headers = ['골프장명', '예약건수'];
+                colspan = 2;
                 if (detailData && detailData.length > 0) {
                     detailData.forEach(item => {
-                        rowsHtml += `<tr><td>${item.name}</td><td>${item.count}</td><td>${item.quantity.toLocaleString()}</td></tr>`;
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.count}</td>
+                        </tr>`;
                     });
                 }
-            } else {
+            } else { 
                 const nameHeader = (category === 'RENTAL_CAR') ? '상품명(차량별)' : '상품명';
                 headers = [nameHeader, '예약건수'];
                 colspan = 2;
                 if (detailData && detailData.length > 0) {
                     detailData.forEach(item => {
-                        rowsHtml += `<tr><td>${item.name}</td><td>${item.count}</td></tr>`;
+                        rowsHtml += `<tr>
+                            <td>${item.name}</td>
+                            <td>${item.count}</td>
+                        </tr>`;
                     });
                 }
             }
@@ -145,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function() {
     filterButton.addEventListener('click', () => {
         updateDashboard(startDateInput.value, endDateInput.value);
     });
-
+    
     resetButton.addEventListener('click', () => {
         startDateInput.value = '';
         endDateInput.value = '';

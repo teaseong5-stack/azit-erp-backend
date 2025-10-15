@@ -254,6 +254,7 @@ def reservation_summary(request):
         ).order_by('category')
         return Response(summary)
     
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
     elif group_by == 'product':
         category_filter = request.query_params.get('category')
         if not category_filter:
@@ -262,20 +263,18 @@ def reservation_summary(request):
         queryset = queryset.filter(category=category_filter)
 
         if category_filter == 'ACCOMMODATION':
-            queryset = queryset.filter(details__roomCount__isnull=False).exclude(details__roomCount='')
-            summary = queryset.values('tour_name').annotate(
-                count=Count('id'),
-                quantity=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0)
-            ).order_by('-count')
-            return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
+            summary = queryset.filter(details__roomCount__isnull=False, details__nights__isnull=False)\
+                              .values('tour_name').annotate(
+                                  room_count_sum=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0),
+                                  nights_sum=Coalesce(Sum(Cast(F('details__nights'), IntegerField())), 0)
+                              ).order_by('tour_name')
+            return Response([{'name': item['tour_name'], 'room_count_sum': item['room_count_sum'], 'nights_sum': item['nights_sum']} for item in summary])
 
         elif category_filter == 'GOLF':
-            queryset = queryset.filter(details__players__isnull=False).exclude(details__players='')
             summary = queryset.values('tour_name').annotate(
-                count=Count('id'),
-                quantity=Coalesce(Sum(Cast(F('details__players'), IntegerField())), 0)
+                count=Count('id')
             ).order_by('-count')
-            return Response([{'name': item['tour_name'], 'count': item['count'], 'quantity': item['quantity']} for item in summary])
+            return Response([{'name': item['tour_name'], 'count': item['count']} for item in summary])
         
         elif category_filter in ['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER']:
             summary = queryset.values('tour_name').annotate(
@@ -285,6 +284,7 @@ def reservation_summary(request):
         
         else:
             return Response({"error": "Invalid category for product summary"}, status=status.HTTP_400_BAD_REQUEST)
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
 
     elif group_by == 'manager':
         summary = queryset.values('manager__username').annotate(
@@ -341,7 +341,6 @@ def reservation_list(request):
         if reservation_date_lte:
             queryset = queryset.filter(reservation_date__lte=reservation_date_lte)
 
-        # [수정] '총 이용 고객 수' 관련 집계 로직을 제거합니다.
         summary = queryset.aggregate(
             total_cost=Coalesce(Sum('total_cost'), Value(0, output_field=DecimalField())),
             total_price=Coalesce(Sum('total_price'), Value(0, output_field=DecimalField())),
