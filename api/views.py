@@ -20,6 +20,7 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
+    # 기준 로직: 확정, 잔금완료, 여행완료 건만 집계
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
     manager_id = request.query_params.get('manager', None)
@@ -225,7 +226,11 @@ def reservation_list_all(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
-    queryset = Reservation.objects.exclude(status='CANCELED')
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
+    # 기존: queryset = Reservation.objects.exclude(status='CANCELED')
+    # 변경: report_summary와 동일하게 '확정'된 건들만 집계하도록 변경
+    queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
     
     year = request.query_params.get('year')
     month = request.query_params.get('month')
@@ -254,7 +259,6 @@ def reservation_summary(request):
         ).order_by('category')
         return Response(summary)
     
-    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
     elif group_by == 'product':
         category_filter = request.query_params.get('category')
         if not category_filter:
@@ -263,12 +267,13 @@ def reservation_summary(request):
         queryset = queryset.filter(category=category_filter)
 
         if category_filter == 'ACCOMMODATION':
-            summary = queryset.filter(details__roomCount__isnull=False, details__nights__isnull=False)\
-                              .values('tour_name').annotate(
-                                  room_count_sum=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0),
-                                  nights_sum=Coalesce(Sum(Cast(F('details__nights'), IntegerField())), 0)
-                              ).order_by('tour_name')
-            return Response([{'name': item['tour_name'], 'room_count_sum': item['room_count_sum'], 'nights_sum': item['nights_sum']} for item in summary])
+            queryset = queryset.filter(details__roomCount__isnull=False).exclude(details__roomCount='')
+            summary = queryset.values('tour_name').annotate(
+                count=Count('id'),
+                room_count_sum=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0),
+                nights_sum=Coalesce(Sum(Cast(F('details__nights'), IntegerField())), 0)
+            ).order_by('-count')
+            return Response([{'name': item['tour_name'], 'count': item['count'], 'room_count_sum': item['room_count_sum'], 'nights_sum': item['nights_sum']} for item in summary])
 
         elif category_filter == 'GOLF':
             summary = queryset.values('tour_name').annotate(
@@ -284,7 +289,6 @@ def reservation_summary(request):
         
         else:
             return Response({"error": "Invalid category for product summary"}, status=status.HTTP_400_BAD_REQUEST)
-    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
 
     elif group_by == 'manager':
         summary = queryset.values('manager__username').annotate(
