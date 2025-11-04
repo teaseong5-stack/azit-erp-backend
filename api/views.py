@@ -20,7 +20,6 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_summary(request):
-    # 기준 로직: 확정, 잔금완료, 여행완료 건만 집계
     queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
 
     manager_id = request.query_params.get('manager', None)
@@ -82,6 +81,8 @@ def user_list(request):
 def export_reservations_csv(request):
     queryset = Reservation.objects.select_related('customer', 'manager').order_by('-reservation_date')
     
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
+    # reservation_list와 동일한 필터링 로직을 적용합니다.
     manager_id = request.query_params.get('manager', None)
     category = request.query_params.get('category', None)
     search = request.query_params.get('search', None)
@@ -110,16 +111,47 @@ def export_reservations_csv(request):
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="reservations.csv"'
     writer = csv.writer(response)
-    writer.writerow(['ID', '카테고리', '상품명', '고객명', '담당자', '시작일', '종료일', '판매가', '원가', '예약상태', '요청사항', '내부메모'])
     
+    # 새로운 컬럼 헤더
+    writer.writerow([
+        '고객명', '예약일', '시작일', '카테고리', '상품명', 
+        '매입가', '판매가', '결제금액', '마진', 
+        '성인', '아동', '유아', '상태', '담당'
+    ])
+    
+    # 새로운 데이터 로직
     for res in queryset:
+        margin = (res.total_price or 0) - (res.total_cost or 0)
+        
+        adults, children, infants = '', '', ''
+        details = res.details or {}
+        
+        if res.category in ['TOUR', 'RENTAL_CAR', 'TICKET', 'OTHER']:
+            adults = details.get('adults', 0)
+            children = details.get('children', 0)
+            infants = details.get('infants', 0)
+        elif res.category == 'ACCOMMODATION':
+            adults = details.get('guests', 0)
+        elif res.category == 'GOLF':
+            adults = details.get('players', 0)
+        
         writer.writerow([
-            res.id, res.get_category_display(), res.tour_name,
             res.customer.name if res.customer else '',
-            res.manager.username if res.manager else '',
-            res.start_date, res.end_date, res.total_price, res.total_cost,
-            res.get_status_display(), res.requests, res.notes
+            res.reservation_date,
+            res.start_date,
+            res.get_category_display(),
+            res.tour_name,
+            res.total_cost,
+            res.total_price,
+            res.payment_amount,
+            margin,
+            adults,
+            children,
+            infants,
+            res.get_status_display(),
+            res.manager.username if res.manager else ''
         ])
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
     return response
 
 # --- Customer 관련 뷰 ---
@@ -226,11 +258,7 @@ def reservation_list_all(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reservation_summary(request):
-    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
-    # 기존: queryset = Reservation.objects.exclude(status='CANCELED')
-    # 변경: report_summary와 동일하게 '확정'된 건들만 집계하도록 변경
-    queryset = Reservation.objects.filter(status__in=['CONFIRMED', 'PAID', 'COMPLETED'])
-    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
+    queryset = Reservation.objects.exclude(status='CANCELED')
     
     year = request.query_params.get('year')
     month = request.query_params.get('month')
@@ -267,7 +295,7 @@ def reservation_summary(request):
         queryset = queryset.filter(category=category_filter)
 
         if category_filter == 'ACCOMMODATION':
-            queryset = queryset.filter(details__roomCount__isnull=False).exclude(details__roomCount='')
+            queryset = queryset.filter(details__roomCount__isnull=False, details__nights__isnull=False)
             summary = queryset.values('tour_name').annotate(
                 count=Count('id'),
                 room_count_sum=Coalesce(Sum(Cast(F('details__roomCount'), IntegerField())), 0),

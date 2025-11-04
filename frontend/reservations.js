@@ -451,6 +451,11 @@ document.addEventListener("DOMContentLoaded", async function() {
         document.getElementById('summary-list-payment').textContent = `${total_payment.toLocaleString()} VND`;
         document.getElementById('summary-list-margin').textContent = `${total_margin.toLocaleString()} VND`;
         
+        // '총 이용 고객 수' 관련 카드 렌더링 제거
+        document.getElementById('summary-list-adults').closest('.col').style.display = 'none';
+        document.getElementById('summary-list-children').closest('.col').style.display = 'none';
+        document.getElementById('summary-list-infants').closest('.col').style.display = 'none';
+
         const marginEl = document.getElementById('summary-list-margin');
         marginEl.classList.toggle('text-primary', total_margin >= 0);
         marginEl.classList.toggle('text-danger', total_margin < 0);
