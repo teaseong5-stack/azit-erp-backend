@@ -436,31 +436,38 @@ document.addEventListener("DOMContentLoaded", async function() {
         const container = document.getElementById('list-summary-container');
         const filters = getFiltersFromInputs();
 
-        if (!summary || (!filters.start_date__gte && !filters.reservation_date__gte)) {
+        // [수정] 날짜 필터가 없어도 summary가 있으면 항상 표시 (전체 합계용)
+        if (!summary) {
             container.style.display = 'none';
             return;
         }
-
-        const total_cost = Number(summary.total_cost || 0);
-        const total_price = Number(summary.total_price || 0);
-        const total_payment = Number(summary.total_payment || 0);
+        
+        // [수정] 날짜 필터가 없을 때(전체 조회)는 합계를 0으로 초기화 (무의미하므로)
+        const hasDateFilter = filters.start_date__gte || filters.reservation_date__gte;
+        const total_cost = hasDateFilter ? Number(summary.total_cost || 0) : 0;
+        const total_price = hasDateFilter ? Number(summary.total_price || 0) : 0;
+        const total_payment = hasDateFilter ? Number(summary.total_payment || 0) : 0;
         const total_margin = total_price - total_cost;
 
-        document.getElementById('summary-list-cost').textContent = `${total_cost.toLocaleString()} VND`;
-        document.getElementById('summary-list-price').textContent = `${total_price.toLocaleString()} VND`;
-        document.getElementById('summary-list-payment').textContent = `${total_payment.toLocaleString()} VND`;
-        document.getElementById('summary-list-margin').textContent = `${total_margin.toLocaleString()} VND`;
+        document.getElementById('summary-list-cost').textContent = hasDateFilter ? `${total_cost.toLocaleString()} VND` : '-';
+        document.getElementById('summary-list-price').textContent = hasDateFilter ? `${total_price.toLocaleString()} VND` : '-';
+        document.getElementById('summary-list-payment').textContent = hasDateFilter ? `${total_payment.toLocaleString()} VND` : '-';
+        document.getElementById('summary-list-margin').textContent = hasDateFilter ? `${total_margin.toLocaleString()} VND` : '-';
         
-        // '총 이용 고객 수' 관련 카드 렌더링 제거
-        document.getElementById('summary-list-adults').closest('.col').style.display = 'none';
-        document.getElementById('summary-list-children').closest('.col').style.display = 'none';
-        document.getElementById('summary-list-infants').closest('.col').style.display = 'none';
+        // [수정] '총 이용 고객 수' 관련 카드 렌더링 제거
+        const adultsCol = document.getElementById('summary-list-adults');
+        if (adultsCol) adultsCol.closest('.col').style.display = 'none';
+        const childrenCol = document.getElementById('summary-list-children');
+        if (childrenCol) childrenCol.closest('.col').style.display = 'none';
+        const infantsCol = document.getElementById('summary-list-infants');
+        if (infantsCol) infantsCol.closest('.col').style.display = 'none';
 
         const marginEl = document.getElementById('summary-list-margin');
         marginEl.classList.toggle('text-primary', total_margin >= 0);
         marginEl.classList.toggle('text-danger', total_margin < 0);
 
-        container.style.display = 'flex';
+        // [수정] 날짜 필터가 있을 때만 현황판을 보여줍니다.
+        container.style.display = hasDateFilter ? 'flex' : 'none';
     }
 
     function getFiltersFromInputs() {
