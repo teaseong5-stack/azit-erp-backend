@@ -39,6 +39,9 @@ urlpatterns = [
     path('transactions/summary/', views.transaction_summary, name='transaction_summary'),
     path('transactions/<int:pk>/', views.transaction_detail, name='transaction_detail'),
     
-    # --- [신규] 대시보드 ---
+    # --- 대시보드 ---
     path('dashboard-summary/', views.dashboard_summary, name='dashboard_summary'),
+    
+    # --- [신규] 예약 현황판 ---
+    path('booking-board-summary/', views.booking_board_summary, name='booking_board_summary'),
 ]
