@@ -689,9 +689,12 @@ def booking_board_summary(request):
     today = timezone.now().date()
     
     # 1. Today's Schedules
+    # --- ▼▼▼ [수정] 이 부분이 수정되었습니다 ▼▼▼ ---
+    # .order_by('details__startTime', 'tour_name')에서 위험한 정렬 제거
     today_schedules = Reservation.objects.filter(
         start_date=today, status__in=['CONFIRMED', 'PAID', 'COMPLETED']
-    ).select_related('customer', 'manager').order_by('details__startTime', 'tour_name')
+    ).select_related('customer', 'manager').order_by('tour_name')
+    # --- ▲▲▲ [수정] 이 부분이 수정되었습니다 ▲▲▲ ---
     
     # 2. Weekly Summary
     start_of_week = today - timedelta(days=today.weekday())

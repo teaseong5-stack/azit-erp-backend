@@ -29,6 +29,16 @@ document.addEventListener("DOMContentLoaded", async function() {
             tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">확인이 필요한 항목이 없습니다.</td></tr>';
             return;
         }
+
+        // [수정] 클라이언트 사이드에서 정렬 (API가 정렬하지 않은 데이터를 보냄)
+        items.sort((a, b) => {
+            const dateA = a.start_date || '9999-12-31';
+            const dateB = b.start_date || '9999-12-31';
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+            return 0;
+        });
+
         tableBody.innerHTML = items.map(item => `
             <tr>
                 <td>${item.start_date || '미정'}</td>
@@ -68,6 +78,10 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     function renderMonthlyTrendChart(data) {
         const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+        
+        // [수정] 월별 데이터 정렬
+        data.sort((a, b) => new Date(a.month) - new Date(b.month));
+
         const labels = data.map(item => new Date(item.month).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' }));
         const salesData = data.map(item => item.sales);
         const marginData = data.map(item => item.margin);
@@ -110,6 +124,10 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     function renderManagerChart(data) {
         const ctx = document.getElementById('managerBarChart').getContext('2d');
+        
+        // [수정] 매출액 기준 정렬
+        data.sort((a, b) => b.sales - a.sales);
+
         const labels = data.map(item => item.manager__username || '미지정');
         const salesData = data.map(item => item.sales);
 
@@ -146,7 +164,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     // --- 3. 페이지 초기화 ---
     async function initializeDashboard() {
         try {
-            const data = await window.apiFetch('dashboard-summary');
+            const data = await window.apiFetch('dashboard-summary/');
             
             renderKpiCards(data.kpi);
             renderActionItems(data.action_items);
